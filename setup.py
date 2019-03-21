@@ -11,7 +11,7 @@ setuptools.setup(
     description="This package is for measuring the apparent optical depth of spectra",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    # url="https://github.com/pypa/sampleproject",
+    url="https://github.com/cmagness/spectrAOD",
     packages=setuptools.find_packages(),
     classifiers=[
         'Intended Audience :: Science/Research',
