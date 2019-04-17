@@ -33,6 +33,7 @@ def parse():
     parser.add_argument("velocity", type=int, help="velocity window of interest around ion, in km")
     parser.add_argument("--grating", type=str, help="optional grating to choose from")
     # need to set default grating to something for creating Spectrum object
+    # NEED TO DO SOMETHING ABOUT THE FACT THAT COULD HAVE ION LIST IN THE FUTURE
 
     # grating evaluation needs some work because it will have to be checked that the ion of interest falls in wavelength
     # range of the grating
@@ -46,9 +47,25 @@ def parse():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def get_ion(ion, file="ions.csv"):
+def get_ion(ion, spectrum, file="mini_ions.csv"):
+    """This function retrieves the ion of interest's wavelength from the ions file and creates a dictionary. Accounts for
+    doublets as well."""
+
+    df_ions = pd.read_csv(file, delimiter=" ", header=None)
+    df_masked = df_ions[df_ions[0] == ion]
+    # DO I EVEN NEED THE DOUBLET FLAG
+    doublet = False
+    if len(df_masked) > 1:
+        doublet = True
+    ion_wv = {}
+    for index, row in df_masked.iterrows():
+        row_ion = row[0]
+        wavelength = float(row[1])  # truncate this to 4 digits
+        ion_wv[wavelength] = row_ion
+
+    spectrum.set_doublet(doublet)
+
     return ion_wv
-    pass
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -57,17 +74,14 @@ def lsr_correct(args, spectrum):
     """This function performs the lsr correction"""
 
     # find ion wavelength from ions.csv
-    ion_wv = get_ion(args.ion)
+    ion_wv = get_ion(args.ion, spectrum)
     # transform wavelength array of Spectrum object to velocity space
     spectrum.calculate_velocity(ion_wv)
     # find RA & DEC of target from target list
     spectrum.get_coords(TARGETS)
-    # transform RA & DEC to L & B
-    spectrum.to_galactic()
+    # l & b are properties of the Spectrum object dependent on RA & DEC and are therefore automatically available
     # calculate velocity correction & add velocity correction to Spectrum object wavelength array (in velocity space)
     spectrum.lsr_correct_velocity()
-
-    # to check: do i need to reassign the spectrum to itself since i've updated attributes?
 
     return spectrum
 
@@ -76,6 +90,20 @@ def lsr_correct(args, spectrum):
 
 
 def continuum_fit(args, spectrum):
+    # linear fit between continuum velocity ranges
+    # how should we choose these ranges?
+    # find index of velocity ranges
+    # continuum will have flux, velocity, and noise
+    # flux = mean of flux between index window
+    # velocity = mean of velocity between index window
+    # noise = standard deviation of the flux between index window
+    # S/N = continuum/noise for both continuum ranges
+    # avg S/N
+
+    # slope=(cont2-cont1)/(vc2-vc1) & yint=cont1-slope*vc1
+    # continuum array = slope*v + yint & fnorm=flux/carr & enorm=error/carr
+    # dv=v & for k=1, n_elements(v)-1 do dv[k]=v[k]-v[k-1] & dv[0]=dv[1]
+    # pixsize=mean(dv[i1:i2]) & stonres=stona*sqrt(2.998d5/(16000.*pixsize)) ; S/N per resolution element
     pass
 
 

@@ -17,6 +17,7 @@ DATADIR = "/user/cmagness/fermi/data/15339/UVQSJ191928-295808/x1d/"
 
 C = 2.99792458e5  # km/s
 
+
 # OUTDIR = "/user/cmagness/fermi/data/out/" this is unused at this time but will be eventually
 
 # at some point need to check and see if outdir (and datadir, really too) exist. if not, create outdir
@@ -34,39 +35,53 @@ C = 2.99792458e5  # km/s
 
 class BaseSpectrum:
     """This is the base class for the Spectrum objects that get used to store data for this package."""
+
     # NEED TO ADD SOME ERROR HANDLING IF METHODS ARE CALLED BEFORE ATTRIBUTES USED ARE DEFINED
 
     def __init__(self, target, wave, flux):
         self.target = target
         self.wave = wave
         self.flux = flux
-        self.velocity = None  # is it best practice to set attributes to empty/none that you plan to define later?
+        self.doublet = False
+        self.velocity = None
         self.ra = None
         self.dec = None
-        self.l = None
-        self.b = None
+        self._skycoords = None
+        # ADD A FLAG FOR INSIDE VS OUTSIDE FERMI BUBBLES
 
-    def calculate_velocity(self, ion_wv):
+    @property
+    def l(self):
+        return self._skycoords.galactic.l.value
+
+    @property
+    def b(self):
+        return self._skycoords.galactic.b.value
+
+    def set_doublet(self, doublet):
+        self.doublet = doublet
+
+    def calculate_velocity(self, ion_wv: dict):
         # this method calculates the wavelength in velocity space wrt to the ion of interest and stores it
-        z_array = (self.wave - ion_wv) / ion_wv
-        self.velocity = C * z_array
+        for wv in ion_wv:
+            z_array = (self.wave - wv) / wv
+            vel_array = C * z_array
+            self.velocity.append(vel_array)
+        # eventually will need to keep track of ion associated with the velocity array
+        # for now it is fine because they are associated with the same ion in the doublet case
 
     def get_coords(self, target_list):
         # this method should get the RA & DEC from the coordinates list
         df_targets = pd.read_csv(target_list, index_col=0)
-        # HERE
-        pass
-
-    def to_galactic(self):
-        # this method should change the RA & DEC to galactic coordinates
-        skycoord = SkyCoord(ra=self.ra * u.degree, dec=self.dec * u.degree)
-        self.l = skycoord.galactic.l  # these are an astropy type object, need to just capture the value
-        self.b = skycoord.galactic.b
+        # need to add some error handling for if target name is not found in list
+        mask = df_targets["Target"] == self.target
+        self.ra = df_targets.loc[mask]["RA"]
+        self.dec = df_targets.loc[mask]["DEC"]
+        self._skycoords = SkyCoord(ra=self.ra * u.degree, dec=self.dec * u.degree)
 
     def lsr_correct_velocity(self):
         # this method should apply the lsr correction to the heliocentric coordinates
-        l_radians = self.l * np.pi/180.0
-        b_radians = self.b * np.pi/180.0
+        l_radians = self.l * np.pi / 180.0
+        b_radians = self.b * np.pi / 180.0
         vel_corr = (9.0 * np.cos(l_radians) * np.cos(b_radians)) + (12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
         self.velocity = self.velocity + vel_corr
@@ -115,6 +130,7 @@ def format_data(datadir=DATADIR, ins="COS", file="X1DSUM", grating="G130M"):
                 with fits.open(x1dsum) as f:
                     prhd = f["PRIMARY"].header
                     opt_elem = prhd["OPT_ELEM"]
+                    # WHAT IF IT FINDS MULTIPLE X1DSUMS HERE?
                     if opt_elem == grating:
                         target_data = f["SCI"].data
                         target = prhd["TARGNAME"]
