@@ -84,11 +84,15 @@ class BaseSpectrum:
         b_radians = self.b * np.pi / 180.0
         vel_corr = (9.0 * np.cos(l_radians) * np.cos(b_radians)) + (12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
-        for idx in len(self.velocity) - 1:
+        for idx in np.arange(len(self.velocity)):
             self.velocity[idx] = self.velocity[idx] + vel_corr
 
     def to_fits(self):
         # this method should generate a fits file
+        pass
+
+    def generate_table(self):
+        # this method should generate the table with all the measurements
         pass
 
 
