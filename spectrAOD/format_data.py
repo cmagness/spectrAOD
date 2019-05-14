@@ -38,10 +38,14 @@ class BaseSpectrum:
 
     # NEED TO ADD SOME ERROR HANDLING IF METHODS ARE CALLED BEFORE ATTRIBUTES USED ARE DEFINED
 
-    def __init__(self, target, wave, flux):
+    def __init__(self, target, wave, flux, error):
         self.target = target
         self.wave = wave
         self.flux = flux
+        self.error = error
+        self.norm_flux = None
+        self.norm_error = None
+        self.continuum = None
         self.doublet = False
         self.velocity = None
         self.ra = None
@@ -86,6 +90,77 @@ class BaseSpectrum:
                    (7.0 * np.sin(b_radians))
         for idx in np.arange(len(self.velocity)):
             self.velocity[idx] = self.velocity[idx] + vel_corr
+
+    def find_indices(self, left, right):
+        # this method finds the indices for the continuum windows
+        indices = []
+        for idx in np.arange(len(self.velocity) + 1):
+            index_row = []
+            for val in left[0], left[1], right[0], right[1]:
+                index_row.append(list(self.velocity[idx]).index(val))
+            indices.append(index_row)
+        return indices
+
+    def calculate_continuum(self, indices):
+        # this method calculates the continuum, signal to noise, and pixel measurements
+        continuum = []  # this is a list holding the continuum measurements for each spectrum.velocity
+        signalnoise = []
+        dv = []
+        for idx, row in enumerate(indices):
+            left_min, left_max, right_min, right_max = row
+            flux_l = np.mean(spectrum.flux[left_min:left_max])  # mean of flux from in range of indices determined above
+            flux_r = np.mean(spectrum.flux[right_min:right_max])
+            vel_l = np.mean(
+                spectrum.velocity[idx][left_min:left_max])  # mean of velocity array corresp. to row in range
+            vel_r = np.mean(spectrum.velocity[idx][right_min:right_max])  # of indices determined above
+            noise_l = np.std(spectrum.flux[left_min:left_max])  # std dev of flux in range as determined above
+            noise_r = np.std(spectrum.flux[right_min:right_max])
+            continuum_row = {"flux": [flux_l, flux_r], "velocity": [vel_l, vel_r], "noise": [noise_l, noise_r]}
+            # ^ this can be stored as left and right instead of by flux, velocity, and noise
+            continuum.append(continuum_row)
+
+            sn_l = continuum_row["flux"][0] / continuum_row["noise"][0]
+            sn_r = continuum_row["flux"][1] / continuum_row["noise"][1]
+            sn_avg = (sn_l + sn_r) / 2.0
+            sn_row = [sn_l, sn_r, sn_avg]
+            signalnoise.append(sn_row)
+
+            upper = self.velocity[idx][1:]
+            lower = self.velocity[idx][:-1]
+            delta = upper - lower
+            dv_row = [delta[0], delta]
+            dv.append(dv_row)
+
+        pixels = []
+        for idx, dv_row in enumerate(dv):
+            index_row = indices[idx]
+            pixsize = np.mean(dv_row[index_row[0]:index_row[1]])
+            sn_res = signalnoise[idx][2] * np.sqrt(
+                2.998e5 / (16000.0 * pixsize))  # signal to noise per resolution element
+            pixels.append([pixsize, sn_res])
+
+        return continuum, signalnoise, pixels  # figure out what to do with this later
+
+    def calculate_fits(self, continuum):
+        # this method calculates the linear fits to the continuum windows and calculates the normalized arrays
+        fits = []
+        lists = []
+        for idx, cdict in enumerate(continuum):
+            slope = (cdict["flux"][1] - cdict["flux"][0]) / (
+                    cdict["velocity"][1] - cdict["velocity"][0])  # right - left f/v
+            yint = cdict["flux"][0] - (slope * cdict["velocity"][0])
+            continuum_array = (slope * self.velocity[idx]) + yint
+            normalized_flux = self.flux / continuum_array
+            normalized_error = self.error / continuum_array
+            fit_row = [slope, yint]
+            list_row = [continuum_array, normalized_flux, normalized_error]
+            fits.append(fit_row)
+            lists.append(list_row)
+        self.continuum = lists[0]  # list of calculated continuums
+        self.norm_flux = lists[1]  # list of normalized fluxes
+        self.norm_error = lists[2]  # list of normalized errors
+
+        return self, fits
 
     def to_fits(self):
         # this method should generate a fits file
@@ -141,7 +216,8 @@ def format_data(datadir=DATADIR, ins="COS", file="X1DSUM", grating="G130M"):
                         target = prhd["TARGNAME"]
                         wave = target_data["WAVELENGTH"]
                         flux = target_data["FLUX"]
-                        spectrum = X1DSpectrum(target, wave, flux)
+                        error = target_data["ERROR"]
+                        spectrum = X1DSpectrum(target, wave, flux, error)
         else:
             print("Other file types are not yet supported at this time.")
     else:
