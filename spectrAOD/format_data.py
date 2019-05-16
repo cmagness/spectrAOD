@@ -108,13 +108,13 @@ class BaseSpectrum:
         dv = []
         for idx, row in enumerate(indices):
             left_min, left_max, right_min, right_max = row
-            flux_l = np.mean(spectrum.flux[left_min:left_max])  # mean of flux from in range of indices determined above
-            flux_r = np.mean(spectrum.flux[right_min:right_max])
+            flux_l = np.mean(self.flux[left_min:left_max])  # mean of flux from in range of indices determined above
+            flux_r = np.mean(self.flux[right_min:right_max])
             vel_l = np.mean(
-                spectrum.velocity[idx][left_min:left_max])  # mean of velocity array corresp. to row in range
-            vel_r = np.mean(spectrum.velocity[idx][right_min:right_max])  # of indices determined above
-            noise_l = np.std(spectrum.flux[left_min:left_max])  # std dev of flux in range as determined above
-            noise_r = np.std(spectrum.flux[right_min:right_max])
+                self.velocity[idx][left_min:left_max])  # mean of velocity array corresp. to row in range
+            vel_r = np.mean(self.velocity[idx][right_min:right_max])  # of indices determined above
+            noise_l = np.std(self.flux[left_min:left_max])  # std dev of flux in range as determined above
+            noise_r = np.std(self.flux[right_min:right_max])
             continuum_row = {"flux": [flux_l, flux_r], "velocity": [vel_l, vel_r], "noise": [noise_l, noise_r]}
             # ^ this can be stored as left and right instead of by flux, velocity, and noise
             continuum.append(continuum_row)
@@ -143,7 +143,7 @@ class BaseSpectrum:
 
     def calculate_fits(self, continuum):
         # this method calculates the linear fits to the continuum windows and calculates the normalized arrays
-        fits = []
+        linear_fits = []
         lists = []
         for idx, cdict in enumerate(continuum):
             slope = (cdict["flux"][1] - cdict["flux"][0]) / (
@@ -154,7 +154,7 @@ class BaseSpectrum:
             normalized_error = self.error / continuum_array
             fit_row = [slope, yint]
             list_row = [continuum_array, normalized_flux, normalized_error]
-            fits.append(fit_row)
+            linear_fits.append(fit_row)
             lists.append(list_row)
         self.continuum = lists[0]  # list of calculated continuums
         self.norm_flux = lists[1]  # list of normalized fluxes

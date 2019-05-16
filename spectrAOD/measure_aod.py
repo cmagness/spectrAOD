@@ -118,8 +118,6 @@ def measure_aod():
     # f val and lambda come from the ions.csv, wavelength and f value
 
     # EW
-
-
     pass
 
 
@@ -138,6 +136,7 @@ def main():
     measure_aod()
     # store measurements
     # does this need a separate function?
+    # also perhaps a separate function for measuring the equivalent width
     # generate table
     spectrum.generate_table()
     return 0
