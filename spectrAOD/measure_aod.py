@@ -10,9 +10,11 @@ __email__ = "cmagness@stsci.edu"
 import sys
 import argparse
 
+# from astropy import constants
+
 from .format_data import *
 
-C = 2.99792458e5  # km/s
+# C = constants.c.to('km/s')  # km/s
 
 DATADIR = "/user/cmagness/fermi/data/15339/UVQSJ191928-295808/x1d/"
 OUTDIR = "/user/cmagness/fermi/data/out/"
@@ -48,8 +50,8 @@ def parse():
 
 
 def get_ion(ion, spectrum, file="mini_ions.csv"):
-    """This function retrieves the ion of interest's wavelength from the ions file and creates a dictionary. Accounts for
-    doublets as well."""
+    """This function retrieves the ion of interest's wavelength from the ions file and creates a dictionary. Accounts
+    for doublets as well."""
 
     df_ions = pd.read_csv(file, delimiter=" ", header=None)
     df_masked = df_ions[df_ions[0] == ion]
@@ -94,23 +96,44 @@ def continuum_fit(spectrum, left=[-450, -300], right=[300, 450]):
     and error arrays"""
 
     # find indices in spectrum.velocity corresponding to left and right continuum window boundaries
-    indices = find_indices(spectrum, left, right)
+    left_indices = spectrum.find_indices(left)
+    right_indices = spectrum.find_indices(right)
+    indices = [left + right for left, right in zip(left_indices, right_indices)]
     # calculating means, signal to noise, pixel size, and S/N per resel
-    continuum, signalnoise, pixels = calculate_continuum(spectrum, indices)
+    continuum, signalnoise, pixels = spectrum.calculate_continuum(indices)
+    # WE WANT TO ADD THE SN_AVG AS AN ATTRIBUTE FOR THE TABLE AT SOME POINT PROBABLY
     # calculating fits to continuum windows and updating normalized flux and error attributes
-    spectrum, fits = calculate_fits(spectrum, continuum)
+    spectrum, linear_fits = spectrum.calculate_fits(continuum)
 
     return spectrum
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def measure_aod():
+def measure_aod(args, spectrum):
 
-    # find indices in velocity window (from -100 to 100)
-    # truncate the full arrays into sub arrays around each window
-    # don't calculate pixel size again
+    # find indices in velocity window (from -100 to 100, for example)
+    window = [args.velocity * -1.0, args.velocity]
+    indices = spectrum.find_indices(window)
+
+    # make truncated spectrum object to perform these measurements
+    helper = AODHelper(spectrum, indices)
+
     # set negative values in flux to percentage of the continuum array (will mark these as saturation)
+    helper.fix_negatives()
+
+    # calculate apparent optical depth and error
+    helper.calculate_aod()
+
+    # calculate apparent column density and error
+    helper.calculate_acd()
+
+    # calculate total apparent optical depth and column density
+    helper.calculate_totals()
+
+    # sets measurements done in helper object in spectrum object
+    spectrum.set_measurements(helper)
+
     # aod is the natural log of the continuum / flux which is 1 / normalized flux
     # calculate errors on aod  (velocity error & flux error), then add in quadrature
     # calculate total aod by summing every element in array

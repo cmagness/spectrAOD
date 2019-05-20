@@ -11,11 +11,12 @@ import numpy as np
 import pandas as pd
 import astropy.units as u
 from astropy.io import fits
+from astropy import constants
 from astropy.coordinates import SkyCoord
 
 DATADIR = "/user/cmagness/fermi/data/15339/UVQSJ191928-295808/x1d/"
 
-C = 2.99792458e5  # km/s
+C = constants.c.to('km/s')  # km/s
 
 
 # OUTDIR = "/user/cmagness/fermi/data/out/" this is unused at this time but will be eventually
@@ -28,6 +29,48 @@ C = 2.99792458e5  # km/s
 # also would be great to have target name, l, b coordinates. or conversion from ra & dec if that information is
 # available
 # add functionality to build fits files as a method of class objects
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class AODHelper:
+    """This class handles measuring AOD operations"""
+
+    def __init__(self, spectrum, indices):
+        truncated_dict = {"velocity": [], "flux": [], "error": [], "continuum": [], "continuum_error": []}
+        for idx, velocity in spectrum.velocity:
+            truncated_dict["velocity"].append(velocity[indices[0]:indices[1]])
+            truncated_dict["flux"].append(spectrum.flux[indices[0]:indices[1]])
+            truncated_dict["error"].append(spectrum.error[indices[0]:indices[1]])
+            truncated_continuum = spectrum.continuum[idx][indices[0]:indices[1]]
+            truncated_dict["continuum"].append(truncated_continuum)
+            continuum_error = 0.05 * truncated_continuum  # 5% continuum fitting error
+            truncated_dict["continuum_error"].append(continuum_error)
+        self.velocity = truncated_dict["velocity"]
+        self.flux = truncated_dict["flux"]
+        self.error = truncated_dict["error"]
+        self.continuum = truncated_dict["continuum"]
+        self.cont_error = truncated_dict["continuum_error"]
+
+    def fix_negatives(self):
+        # this method fixes any negative (and therefore unphysical) flux values
+        for idx, flux in enumerate(self.flux):
+            if any(val <= 0 for val in flux):
+                self.flux[idx] = [self.continuum[idx][index(val)] * 0.01 for val in flux
+                where
+                val <= 0]
+
+    def calculate_aod(self):
+        # this method calculates the apparent optical depth and error
+        pass
+
+    def calculate_acd(self):
+        # this method calculates the apparent column density and error
+        pass
+
+    def calculate_totals(self):
+        # this method calculates the total apparent optical depth and column density and errors
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -91,12 +134,12 @@ class BaseSpectrum:
         for idx in np.arange(len(self.velocity)):
             self.velocity[idx] = self.velocity[idx] + vel_corr
 
-    def find_indices(self, left, right):
-        # this method finds the indices for the continuum windows
+    def find_indices(self, window):
+        # this method finds the indices for a velocity window for each velocity array
         indices = []
         for idx in np.arange(len(self.velocity) + 1):
             index_row = []
-            for val in left[0], left[1], right[0], right[1]:
+            for val in window:
                 index_row.append(list(self.velocity[idx]).index(val))
             indices.append(index_row)
         return indices
@@ -136,7 +179,7 @@ class BaseSpectrum:
             index_row = indices[idx]
             pixsize = np.mean(dv_row[index_row[0]:index_row[1]])
             sn_res = signalnoise[idx][2] * np.sqrt(
-                2.998e5 / (16000.0 * pixsize))  # signal to noise per resolution element
+                C / (16000.0 * pixsize))  # signal to noise per resolution element
             pixels.append([pixsize, sn_res])
 
         return continuum, signalnoise, pixels  # figure out what to do with this later
@@ -161,6 +204,10 @@ class BaseSpectrum:
         self.norm_error = lists[2]  # list of normalized errors
 
         return self, fits
+
+    def set_measurements(self, helper):
+        # this method will set the measurements as calculated by the helper object as attributes in this object
+        pass
 
     def to_fits(self):
         # this method should generate a fits file
