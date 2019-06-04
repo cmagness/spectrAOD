@@ -32,7 +32,8 @@ def parse():
     parser.add_argument("instrument", type=str, help="observational instrument data is taken on")
     parser.add_argument("filetype", type=str, help="file type of data")
     parser.add_argument("ion", type=str, help="absorption line feature of interest")
-    parser.add_argument("velocity", type=int, help="velocity window of interest around ion, in km")
+    parser.add_argument("vel_min", type=int, help="velocity minimum in window of interest around ion, in km/s")
+    parser.add_argument("vel_max", type=int, help="velocity maximum in window of interest around ion, in km/s")
     parser.add_argument("--grating", type=str, help="optional grating to choose from")
     # need to set default grating to something for creating Spectrum object
     # NEED TO DO SOMETHING ABOUT THE FACT THAT COULD HAVE ION LIST IN THE FUTURE
@@ -46,28 +47,6 @@ def parse():
 
     return args, spectrum
 
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-def get_ion(ion, spectrum, file="mini_ions.csv"):
-    """This function retrieves the ion of interest's wavelength from the ions file and creates a dictionary. Accounts
-    for doublets as well."""
-
-    df_ions = pd.read_csv(file, delimiter=" ", header=None)
-    df_masked = df_ions[df_ions[0] == ion]
-    # DO I EVEN NEED THE DOUBLET FLAG
-    doublet = False
-    if len(df_masked) > 1:
-        doublet = True
-    ion_wv = {}
-    for index, row in df_masked.iterrows():
-        row_ion = row[0]
-        wavelength = float(row[1])  # truncate this to 4 digits
-        ion_wv[wavelength] = row_ion
-
-    spectrum.set_doublet(doublet)
-
-    return ion_wv
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -76,13 +55,13 @@ def lsr_correct(args, spectrum):
     """This function performs the lsr correction"""
 
     # find ion wavelength from ions.csv
-    ion_wv = get_ion(args.ion, spectrum)
-    # transform wavelength array of Spectrum object to velocity space
-    spectrum.calculate_velocity(ion_wv)
+    spectrum.get_ions(args.ion)
+    # transform wavelength array of spectrum object to velocity space
+    spectrum.calculate_velocity()
     # find RA & DEC of target from target list
     spectrum.get_coords(TARGETS)
-    # l & b are properties of the Spectrum object dependent on RA & DEC and are therefore automatically available
-    # calculate velocity correction & add velocity correction to Spectrum object wavelength array (in velocity space)
+    # l & b are properties of the spectrum object dependent on RA & DEC and are therefore automatically available
+    # calculate velocity correction & add velocity correction to spectrum object wavelength array (in velocity space)
     spectrum.lsr_correct_velocity()
 
     return spectrum
@@ -110,56 +89,43 @@ def continuum_fit(spectrum, left=[-450, -300], right=[300, 450]):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def measure_aod(args, spectrum):
+def measure(args, spectrum):
 
     # find indices in velocity window (from -100 to 100, for example)
-    window = [args.velocity * -1.0, args.velocity]
+    window = [args.vel_min, args.vel_max]
     indices = spectrum.find_indices(window)
-
     # make truncated spectrum object to perform these measurements
-    helper = AODHelper(spectrum, indices)
-
+    helper = Helper(spectrum, indices)
     # set negative values in flux to percentage of the continuum array (will mark these as saturation)
     helper.fix_negatives()
-
     # calculate apparent optical depth and error
     helper.calculate_aod()
-
     # calculate apparent column density and error
     helper.calculate_acd()
-
-    # calculate total apparent optical depth and column density
-    helper.calculate_totals()
+    # calculate equivalent width and error
+    helper.calculate_ew()
+    # evaluate significance of measurement, set detection flag
+    helper.significance()
 
     # sets measurements done in helper object in spectrum object
     spectrum.set_measurements(helper)
 
-    # aod is the natural log of the continuum / flux which is 1 / normalized flux
-    # calculate errors on aod  (velocity error & flux error), then add in quadrature
-    # calculate total aod by summing every element in array
-    # same set of calculations for acd
-    # f val and lambda come from the ions.csv, wavelength and f value
-
-    # EW
-    pass
+    return spectrum
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 def main():
-    # steps
     # argparse
     args, spectrum = parse()
     # LSR correction
     spectrum = lsr_correct(args, spectrum)
     # continuum fit
     spectrum = continuum_fit(spectrum)
-    # measure aod
-    measure_aod()
-    # store measurements
-    # does this need a separate function?
-    # also perhaps a separate function for measuring the equivalent width
+    # measure aod/acd/ew
+    # set measurements back in spectrum object from helper object
+    spectrum = measure(args, spectrum)
     # generate table
     spectrum.generate_table()
     return 0

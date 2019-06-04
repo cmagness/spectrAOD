@@ -18,6 +18,8 @@ DATADIR = "/user/cmagness/fermi/data/15339/UVQSJ191928-295808/x1d/"
 
 C = constants.c.to('km/s')  # km/s
 
+N = 3.768e14  # proportionality constant -> (m_e * c)/(pi * e**2)
+
 
 # OUTDIR = "/user/cmagness/fermi/data/out/" this is unused at this time but will be eventually
 
@@ -33,45 +35,142 @@ C = constants.c.to('km/s')  # km/s
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class AODHelper:
-    """This class handles measuring AOD operations"""
+class Helper:
+    """This class handles measuring AOD/ACD/EW operations"""
 
     def __init__(self, spectrum, indices):
-        truncated_dict = {"velocity": [], "flux": [], "error": [], "continuum": [], "continuum_error": []}
+        self.ions = spectrum.ions
+        truncated_dict = {"velocity": [], "flux": [], "error": [], "continuum": [], "continuum_error": [], "delta": []}
         for idx, velocity in spectrum.velocity:
             truncated_dict["velocity"].append(velocity[indices[0]:indices[1]])
             truncated_dict["flux"].append(spectrum.flux[indices[0]:indices[1]])
-            truncated_dict["error"].append(spectrum.error[indices[0]:indices[1]])
+            truncated_dict["error"].append(spectrum.norm_error[indices[0]:indices[1]])
             truncated_continuum = spectrum.continuum[idx][indices[0]:indices[1]]
             truncated_dict["continuum"].append(truncated_continuum)
             continuum_error = 0.05 * truncated_continuum  # 5% continuum fitting error
             truncated_dict["continuum_error"].append(continuum_error)
+            truncated_dict["delta"].append(spectrum.delta[idx][indices[0]:indices[1]])
         self.velocity = truncated_dict["velocity"]
         self.flux = truncated_dict["flux"]
         self.error = truncated_dict["error"]
         self.continuum = truncated_dict["continuum"]
         self.cont_error = truncated_dict["continuum_error"]
+        self.delta = truncated_dict["delta"]
+        self.aod = None  # this will become a dictionary of values and errors
+        self.acd = None
+        self.ew = None
+        self.sig = None
+        self.detection = None
 
     def fix_negatives(self):
         # this method fixes any negative (and therefore unphysical) flux values
-        for idx, flux in enumerate(self.flux):
-            if any(val <= 0 for val in flux):
-                self.flux[idx] = [self.continuum[idx][index(val)] * 0.01 for val in flux
-                where
-                val <= 0]
+        for idx, subflux in enumerate(self.flux):
+            if any(val < 0 for val in subflux):
+                self.flux[idx] = [self.continuum[idx][subflux.index(val)] * 0.01 if val < 0 else val for val in subflux]
 
     def calculate_aod(self):
         # this method calculates the apparent optical depth and error
-        pass
+        aod = []
+        for idx, subflux in enumerate(self.flux):
+            aod_row = np.log(self.continuum[idx]/subflux)
+            cont_err = self.cont_error[idx]/self.continuum[idx]
+            flux_err = self.error/subflux  # FIX THIS
+            total_err = np.sqrt([cont**2 for cont in cont_err] + [flux**2 for flux in flux_err])
+
+            aod.append({"aod": [aod_row], "error": [total_err]})
+        self.aod = aod
+
+    @property
+    def aod_val(self):
+        # property to calculate single AOD sum for each ion measurement
+        if self.aod:
+            aod_val = []
+            for idx, subdict in enumerate(self.aod):
+                single_aod = np.sum([aod * delta for aod, delta in zip(subdict["aod"], self.delta[idx])])
+                # each val in aod array is being multiplied by bin width
+                single_err = np.sqrt(np.sum([(err * delta)**2 for err, delta in zip(subdict["aod"], self.delta[idx])]))
+
+                aod_val.append({"aod": single_aod, "error": single_err})
+        else:
+            aod_val = None
+        return aod_val
 
     def calculate_acd(self):
         # this method calculates the apparent column density and error
-        pass
+        acd = []
+        for idx, subaod in enumerate(self.aod):
+            acd_row = N/(self.ions["wv"][idx] * self.ions["f"][idx]) * subaod["aod"]
+            acd_err = N/(self.ions["wv"][idx] * self.ions["f"][idx]) * subaod["error"]
 
-    def calculate_totals(self):
-        # this method calculates the total apparent optical depth and column density and errors
-        pass
+            acd.append({"acd": [acd_row], "error": [acd_err]})
+        self.acd = acd
 
+    @property
+    def acd_val(self):
+        # property to calculate single ACD sum for each ion measurement
+        if self.acd:
+            acd_val = []
+            for idx, subdict in enumerate(self.acd):
+                linear_acd = np.sum([acd * delta for acd, delta in zip(subdict["acd"], self.delta[idx])])
+                linear_err = np.sqrt(np.sum([(err * delta)**2 for err, delta in zip(subdict["error"], self.delta[idx])]))
+                if linear_acd > 0:
+                    log_acd = np.log10(linear_acd)
+                else:
+                    log_acd = 0.00
+                log_err = np.log10(linear_acd + linear_err) - np.log10(linear_acd)
+
+                acd_val.append(dict(linear_acd=linear_acd, linear_error=linear_err, log_acd=log_acd, log_error=log_err))
+        else:
+            acd_val = None
+        return acd_val
+
+    def calculate_ew(self):
+        # this method calculates the equivalent width and error
+        ew = []
+        for idx, subflux in enumerate(self.flux):
+            ew_row = (self.ions["wv"][idx]/C) * self.delta * (1.0 - subflux/self.continuum[idx])
+            cont_err = self.delta * subflux * (self.cont_error[idx] / self.continuum[idx] ** 2)  # FIX THIS AND CHECK
+            flux_err = self.delta * self.error / subflux  # FIX THIS
+            total_err = (self.ions["wv"][idx]/C) * np.sqrt([cont ** 2 for cont in cont_err] + [flux ** 2 for flux in
+                                                                                               flux_err])
+
+            ew.append({"ew": [ew_row], "error": [total_err]})
+        self.ew = ew
+
+    @property
+    def ew_val(self):
+        # property to calculate single EW sum for each ion measurement
+        if self.ew:
+            ew_val = []
+            for idx, subdict in enumerate(self.ew):
+                single_ew = np.sum(subdict["ew"])
+                single_err = np.sqrt(np.sum([err**2 for err in subdict["error"]]))
+
+                ew_val.append({"ew": single_ew, "error": single_err})
+        else:
+            ew_val = None
+        return ew_val
+
+    def significance(self):
+        # this method determines the significance of the measurement, checks for saturation & non detections
+        sig = []
+        for subdict in self.ew_val:
+            sig.extend((subdict["ew"] >= 3.0 * subdict["error"]))
+        self.sig = sig
+
+        # check that this is what we want the logic to be for these detection moments
+        detection = []
+        for idx, subflux in enumerate(self.flux):
+            minimum = min(subflux/self.continuum[idx])
+            cutoff = 0.1
+            if minimum > cutoff:
+                if self.sig[idx]:
+                    detection.extend("D")
+                else:
+                    detection.extend("ND")
+            else:  # minimum <= cutoff
+                detection.extend("S")
+        self.detection = detection
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -89,6 +188,8 @@ class BaseSpectrum:
         self.norm_flux = None
         self.norm_error = None
         self.continuum = None
+        self.delta = None
+        self.ions = None
         self.doublet = False
         self.velocity = None
         self.ra = None
@@ -104,17 +205,36 @@ class BaseSpectrum:
     def b(self):
         return self._skycoords.galactic.b.value
 
-    def set_doublet(self, doublet):
-        self.doublet = doublet
+    def get_ions(self, ion, file="mini_ions.csv"):
+        # this method retrieves the ion of interest's wavelength from the ions file and creates a dictionary. Accounts
+        # for doublets as well.
+        df_ions = pd.read_csv(file, delimiter=" ", header=None)
+        df_masked = df_ions[df_ions[0] == ion]
+        # DO I EVEN NEED THE DOUBLET FLAG
+        doublet = False
+        if len(df_masked) > 1:
+            doublet = True
+        ions = {"ion": [], "wv": [], "f": []}
+        for index, row in df_masked.iterrows():
+            ion = row[0]
+            wv = float(row[1])  # truncate this to 4 digits
+            f_value = float(row[2])
+            ions["ion"] += [ion]
+            ions["wv"] += [wv]
+            ions["f"] += [f_value]
 
-    def calculate_velocity(self, ion_wv: dict):
+        self.doublet = doublet
+        self.ions = ions
+
+    def calculate_velocity(self):
         # this method calculates the wavelength in velocity space wrt to the ion of interest and stores it
-        for wv in ion_wv:
+        for wv in self.ions["wv"]:
             z_array = (self.wave - wv) / wv
             vel_array = C * z_array
             self.velocity.append(vel_array)
         # eventually will need to keep track of ion associated with the velocity array
         # for now it is fine because they are associated with the same ion in the doublet case
+        # ^ DID THIS, BUT SHOULD PROBABLY MOVE GET ION FUNCTIONALITY INTO THIS CLASS
 
     def get_coords(self, target_list):
         # this method should get the RA & DEC from the coordinates list
@@ -168,11 +288,13 @@ class BaseSpectrum:
             sn_row = [sn_l, sn_r, sn_avg]
             signalnoise.append(sn_row)
 
-            upper = self.velocity[idx][1:]
-            lower = self.velocity[idx][:-1]
-            delta = upper - lower
-            dv_row = [delta[0], delta]
-            dv.append(dv_row)
+            upper = self.velocity[idx][2:]
+            lower = self.velocity[idx][:-2]
+            delta = (upper - lower)/2.0
+            dv_row = [delta[0], delta, delta[-1]]
+            dv.append([dv_row])
+
+        self.delta = dv
 
         pixels = []
         for idx, dv_row in enumerate(dv):
