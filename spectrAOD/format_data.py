@@ -6,6 +6,7 @@ as any relevant target information. This object is then used by measure_aod.py t
 __author__ = "Camellia Magness"
 __email__ = "cmagness@stsci.edu"
 
+import os
 import glob
 import numpy as np
 import pandas as pd
@@ -13,6 +14,7 @@ import astropy.units as u
 from astropy.io import fits
 from astropy import constants
 from astropy.coordinates import SkyCoord
+from operator import truediv
 
 DATADIR = "/user/cmagness/fermi/data/15339/UVQSJ191928-295808/x1d/"
 
@@ -20,8 +22,7 @@ C = constants.c.to('km/s')  # km/s
 
 N = 3.768e14  # proportionality constant -> (m_e * c)/(pi * e**2)
 
-
-# OUTDIR = "/user/cmagness/fermi/data/out/" this is unused at this time but will be eventually
+OUTDIR = "/user/cmagness/fermi/data/out/"  # this is unused at this time but will be eventually
 
 # at some point need to check and see if outdir (and datadir, really too) exist. if not, create outdir
 # add logger instead of print statements
@@ -73,8 +74,8 @@ class Helper:
         aod = []
         for idx, subflux in enumerate(self.flux):
             aod_row = np.log(self.continuum[idx]/subflux)
-            cont_err = self.cont_error[idx]/self.continuum[idx]
-            flux_err = self.error/subflux  # FIX THIS
+            cont_err = map(truediv, self.cont_error[idx], self.continuum[idx])
+            flux_err = map(truediv, self.error, subflux)  # FIX THIS
             total_err = np.sqrt([cont**2 for cont in cont_err] + [flux**2 for flux in flux_err])
 
             aod.append({"aod": [aod_row], "error": [total_err]})
@@ -128,9 +129,9 @@ class Helper:
         # this method calculates the equivalent width and error
         ew = []
         for idx, subflux in enumerate(self.flux):
-            ew_row = (self.ions["wv"][idx]/C) * self.delta * (1.0 - subflux/self.continuum[idx])
+            ew_row = (self.ions["wv"][idx]/C) * self.delta * (1.0 - map(truediv, subflux, self.continuum[idx]))
             cont_err = self.delta * subflux * (self.cont_error[idx] / self.continuum[idx] ** 2)  # FIX THIS AND CHECK
-            flux_err = self.delta * self.error / subflux  # FIX THIS
+            flux_err = self.delta * map(truediv, self.error, subflux)  # FIX THIS
             total_err = (self.ions["wv"][idx]/C) * np.sqrt([cont ** 2 for cont in cont_err] + [flux ** 2 for flux in
                                                                                                flux_err])
 
@@ -188,6 +189,8 @@ class BaseSpectrum:
         self.norm_flux = None
         self.norm_error = None
         self.continuum = None
+        self.sn_avg = None
+        self.sn_res = None
         self.delta = None
         self.ions = None
         self.doublet = False
@@ -195,6 +198,16 @@ class BaseSpectrum:
         self.ra = None
         self.dec = None
         self._skycoords = None
+
+        # things that will be retrieved from helper class
+        self.aod = None
+        self.acd = None
+        self.ew = None
+        self.aod_val = None
+        self.acd_val = None
+        self.ew_val = None
+        self.sig = None
+        self.detection = None
         # ADD A FLAG FOR INSIDE VS OUTSIDE FERMI BUBBLES
 
     @property
@@ -232,9 +245,8 @@ class BaseSpectrum:
             z_array = (self.wave - wv) / wv
             vel_array = C * z_array
             self.velocity.append(vel_array)
-        # eventually will need to keep track of ion associated with the velocity array
+        # eventually will need to keep track of ion associated with the velocity array in a better way maybe?
         # for now it is fine because they are associated with the same ion in the doublet case
-        # ^ DID THIS, BUT SHOULD PROBABLY MOVE GET ION FUNCTIONALITY INTO THIS CLASS
 
     def get_coords(self, target_list):
         # this method should get the RA & DEC from the coordinates list
@@ -294,6 +306,7 @@ class BaseSpectrum:
             dv_row = [delta[0], delta, delta[-1]]
             dv.append([dv_row])
 
+        self.sn_avg = [sn_row[-1] for sn_row in signalnoise]
         self.delta = dv
 
         pixels = []
@@ -303,6 +316,10 @@ class BaseSpectrum:
             sn_res = signalnoise[idx][2] * np.sqrt(
                 C / (16000.0 * pixsize))  # signal to noise per resolution element
             pixels.append([pixsize, sn_res])
+
+        self.sn_res = [sn_row[-1] for sn_row in pixels]
+
+        # SHOULD PROBABLY CLEAN UP ALL THE UNUSED STUFF IN THIS METHOD
 
         return continuum, signalnoise, pixels  # figure out what to do with this later
 
@@ -329,14 +346,45 @@ class BaseSpectrum:
 
     def set_measurements(self, helper):
         # this method will set the measurements as calculated by the helper object as attributes in this object
-        pass
+        self.aod = helper.aod
+        self.aod_val = helper.aod_val
+        self.acd = helper.acd
+        self.acd_val = helper.acd_val
+        self.ew = helper.ew
+        self.ew_val = helper.ew_val
+        self.sig = helper.sig
+        self.detection = helper.detection
+
+    def generate_table(self, vel_min, vel_max):
+        # this method should generate the table with all the measurements
+        cols = ["TARGET", "RA", "DEC", "ION", "VEL MIN", "VEL MAX", "AOD", "AOD ERR", "ACD (LIN)", "ACD ERR (LIN)",
+                "ACD (LOG)", "ACD ERR (LOG)", "EW", "EW ERR", "SN AVG", "SN/RESEL", "SIG", "DETECTION"]
+        df = pd.DataFrame(columns=cols)
+        for idx, row in enumerate(self.velocity):
+            df.append({
+                "TARGET": self.target,
+                "RA": self.ra,
+                "DEC": self.dec,
+                "ION": self.ions[idx],
+                "VEL MIN": vel_min,
+                "VEL MAX": vel_max,
+                "AOD": self.aod_val[idx]["aod"],  # ok really the _val properties COULD be properties of this class
+                "AOD ERR": self.aod_val[idx]["error"],  # instead of properties of the helper class
+                "ACD (LIN)": self.acd_val[idx]["linear_acd"],  # which would eliminate the need to pass them between
+                "ACD ERR (LIN)": self.acd_val[idx]["linear_error"],  # consider this in refactoring
+                "ACD (LOG)": self.acd_val[idx]["log_acd"],
+                "ACD ERR (LOG)": self.acd_val[idx]["log_error"]
+                "EW": self.ew_val[idx]["ew"],
+                "EW ERR": self.ew_val[idx]["error"],
+                "SN AVG": self.sn_avg[idx],
+                "SN/RESEL": self.sn_res[idx],
+                "SIG": self.sig[idx],
+                "DETECTION": self.detection[idx]
+            })
+        df.to_csv(os.path.join(OUTDIR + "measurements.csv"))
 
     def to_fits(self):
         # this method should generate a fits file
-        pass
-
-    def generate_table(self):
-        # this method should generate the table with all the measurements
         pass
 
 

@@ -127,7 +127,7 @@ def main():
     # set measurements back in spectrum object from helper object
     spectrum = measure(args, spectrum)
     # generate table
-    spectrum.generate_table()
+    spectrum.generate_table(args.vel_min, args.vel_max)
     return 0
 
 
