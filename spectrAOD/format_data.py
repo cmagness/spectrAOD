@@ -14,11 +14,10 @@ import astropy.units as u
 from astropy.io import fits
 from astropy import constants
 from astropy.coordinates import SkyCoord
-from operator import truediv
 
 DATADIR = "/user/cmagness/fermi/data/15339/UVQSJ191928-295808/x1d/"
 
-C = constants.c.to('km/s')  # km/s
+C = constants.c.to('km/s').value  # km/s
 
 N = 3.768e14  # proportionality constant -> (m_e * c)/(pi * e**2)
 
@@ -41,6 +40,7 @@ class Helper:
 
     def __init__(self, spectrum, indices):
         self.ions = spectrum.ions
+        self.sn_avg = spectrum.sn_avg
         truncated_dict = {"velocity": [], "flux": [], "error": [], "continuum": [], "continuum_error": [], "delta": []}
         for idx, velocity in spectrum.velocity:
             truncated_dict["velocity"].append(velocity[indices[0]:indices[1]])
@@ -67,18 +67,19 @@ class Helper:
         # this method fixes any negative (and therefore unphysical) flux values
         for idx, subflux in enumerate(self.flux):
             if any(val < 0 for val in subflux):
-                self.flux[idx] = [self.continuum[idx][subflux.index(val)] * 0.01 if val < 0 else val for val in subflux]
+                self.flux[idx] = np.array([self.continuum[idx][subflux.index(val)] * 0.01 if val < 0 else val for val
+                                           in subflux])
 
     def calculate_aod(self):
         # this method calculates the apparent optical depth and error
         aod = []
         for idx, subflux in enumerate(self.flux):
-            aod_row = np.log(self.continuum[idx]/subflux)
-            cont_err = map(truediv, self.cont_error[idx], self.continuum[idx])
-            flux_err = map(truediv, self.error, subflux)  # FIX THIS
-            total_err = np.sqrt([cont**2 for cont in cont_err] + [flux**2 for flux in flux_err])
+            aod_row = np.log(self.continuum[idx] / subflux)
+            cont_err = self.cont_error[idx] / self.continuum[idx]
+            flux_err = self.error / subflux
+            total_err = np.sqrt(cont_err**2 + flux_err**2)
 
-            aod.append({"aod": [aod_row], "error": [total_err]})
+            aod.append({"aod": aod_row, "error": total_err})
         self.aod = aod
 
     @property
@@ -87,9 +88,9 @@ class Helper:
         if self.aod:
             aod_val = []
             for idx, subdict in enumerate(self.aod):
-                single_aod = np.sum([aod * delta for aod, delta in zip(subdict["aod"], self.delta[idx])])
+                single_aod = np.sum(subdict["aod"] * self.delta[idx])
                 # each val in aod array is being multiplied by bin width
-                single_err = np.sqrt(np.sum([(err * delta)**2 for err, delta in zip(subdict["aod"], self.delta[idx])]))
+                single_err = np.sqrt(np.sum((subdict["error"] * self.delta[idx])**2))
 
                 aod_val.append({"aod": single_aod, "error": single_err})
         else:
@@ -99,11 +100,11 @@ class Helper:
     def calculate_acd(self):
         # this method calculates the apparent column density and error
         acd = []
-        for idx, subaod in enumerate(self.aod):
-            acd_row = N/(self.ions["wv"][idx] * self.ions["f"][idx]) * subaod["aod"]
-            acd_err = N/(self.ions["wv"][idx] * self.ions["f"][idx]) * subaod["error"]
+        for idx, subacd in enumerate(self.aod):
+            acd_row = N/(self.ions["wv"][idx] * self.ions["f"][idx]) * subacd["acd"]
+            acd_err = N/(self.ions["wv"][idx] * self.ions["f"][idx]) * subacd["error"]
 
-            acd.append({"acd": [acd_row], "error": [acd_err]})
+            acd.append({"acd": acd_row, "error": acd_err})
         self.acd = acd
 
     @property
@@ -112,8 +113,8 @@ class Helper:
         if self.acd:
             acd_val = []
             for idx, subdict in enumerate(self.acd):
-                linear_acd = np.sum([acd * delta for acd, delta in zip(subdict["acd"], self.delta[idx])])
-                linear_err = np.sqrt(np.sum([(err * delta)**2 for err, delta in zip(subdict["error"], self.delta[idx])]))
+                linear_acd = np.sum(subdict["acd"] * self.delta[idx])
+                linear_err = np.sqrt(np.sum((subdict["error"] * self.delta[idx])**2))
                 if linear_acd > 0:
                     log_acd = np.log10(linear_acd)
                 else:
@@ -129,13 +130,12 @@ class Helper:
         # this method calculates the equivalent width and error
         ew = []
         for idx, subflux in enumerate(self.flux):
-            ew_row = (self.ions["wv"][idx]/C) * self.delta * (1.0 - map(truediv, subflux, self.continuum[idx]))
-            cont_err = self.delta * subflux * (self.cont_error[idx] / self.continuum[idx] ** 2)  # FIX THIS AND CHECK
-            flux_err = self.delta * map(truediv, self.error, subflux)  # FIX THIS
-            total_err = (self.ions["wv"][idx]/C) * np.sqrt([cont ** 2 for cont in cont_err] + [flux ** 2 for flux in
-                                                                                               flux_err])
+            ew_row = (self.ions["wv"][idx]/C) * self.delta * (1.0 - (subflux / self.continuum[idx]))
+            cont_err = self.delta * subflux * (self.cont_error[idx] / self.continuum[idx] ** 2)
+            flux_err = self.delta * self.error / subflux
+            total_err = (self.ions["wv"][idx]/C) * np.sqrt(cont_err**2 + flux_err**2)
 
-            ew.append({"ew": [ew_row], "error": [total_err]})
+            ew.append({"ew": ew_row, "error": total_err})
         self.ew = ew
 
     @property
@@ -145,7 +145,7 @@ class Helper:
             ew_val = []
             for idx, subdict in enumerate(self.ew):
                 single_ew = np.sum(subdict["ew"])
-                single_err = np.sqrt(np.sum([err**2 for err in subdict["error"]]))
+                single_err = np.sqrt(np.sum(subdict["error"]**2))
 
                 ew_val.append({"ew": single_ew, "error": single_err})
         else:
@@ -154,18 +154,19 @@ class Helper:
 
     def significance(self):
         # this method determines the significance of the measurement, checks for saturation & non detections
+        sig_boolean = []
         sig = []
         for subdict in self.ew_val:
-            sig.extend((subdict["ew"] >= 3.0 * subdict["error"]))
+            sig_boolean.extend((subdict["ew"] >= 3.0 * subdict["error"]))
+            sig.extend(subdict["ew"] / subdict["error"])
         self.sig = sig
 
-        # check that this is what we want the logic to be for these detection moments
         detection = []
         for idx, subflux in enumerate(self.flux):
             minimum = min(subflux/self.continuum[idx])
-            cutoff = 0.1
+            cutoff = 1/(self.sn_avg[idx])
             if minimum > cutoff:
-                if self.sig[idx]:
+                if sig_boolean[idx]:
                     detection.extend("D")
                 else:
                     detection.extend("ND")
@@ -186,15 +187,15 @@ class BaseSpectrum:
         self.wave = wave
         self.flux = flux
         self.error = error
+        self.ions = None
+        self.velocity = None
         self.norm_flux = None
         self.norm_error = None
         self.continuum = None
         self.sn_avg = None
         self.sn_res = None
         self.delta = None
-        self.ions = None
         self.doublet = False
-        self.velocity = None
         self.ra = None
         self.dec = None
         self._skycoords = None
@@ -241,11 +242,13 @@ class BaseSpectrum:
 
     def calculate_velocity(self):
         # this method calculates the wavelength in velocity space wrt to the ion of interest and stores it
+        vels = []
         for wv in self.ions["wv"]:
             z_array = (self.wave - wv) / wv
             vel_array = C * z_array
-            self.velocity.append(vel_array)
-        # eventually will need to keep track of ion associated with the velocity array in a better way maybe?
+            vels.append(vel_array)
+        self.velocity = vels
+        # eventually will need to keep track of ion associated with the velocity array in a dictionary maybe?
         # for now it is fine because they are associated with the same ion in the doublet case
 
     def get_coords(self, target_list):
@@ -263,8 +266,9 @@ class BaseSpectrum:
         b_radians = self.b * np.pi / 180.0
         vel_corr = (9.0 * np.cos(l_radians) * np.cos(b_radians)) + (12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
+        print(vel_corr, vel_corr[0])
         for idx in np.arange(len(self.velocity)):
-            self.velocity[idx] = self.velocity[idx] + vel_corr
+            self.velocity[idx] = self.velocity[idx] + vel_corr[0]
 
     def find_indices(self, window):
         # this method finds the indices for a velocity window for each velocity array
@@ -272,8 +276,8 @@ class BaseSpectrum:
         for idx in np.arange(len(self.velocity) + 1):
             index_row = []
             for val in window:
-                index_row.append(list(self.velocity[idx]).index(val))
-            indices.append(index_row)
+                index_row.append((np.abs(self.velocity[idx] - val)).argmin())  # this finds smallest deviation from val
+            indices.append(index_row)                                           # and gets index associated with it
         return indices
 
     def calculate_continuum(self, indices):
@@ -303,7 +307,8 @@ class BaseSpectrum:
             upper = self.velocity[idx][2:]
             lower = self.velocity[idx][:-2]
             delta = (upper - lower)/2.0
-            dv_row = [delta[0], delta, delta[-1]]
+            delta = np.insert(delta, 0, delta[0])
+            dv_row = np.insert(delta, len(delta), delta[-1])
             dv.append([dv_row])
 
         self.sn_avg = [sn_row[-1] for sn_row in signalnoise]
@@ -373,7 +378,7 @@ class BaseSpectrum:
                 "ACD (LIN)": self.acd_val[idx]["linear_acd"],  # which would eliminate the need to pass them between
                 "ACD ERR (LIN)": self.acd_val[idx]["linear_error"],  # consider this in refactoring
                 "ACD (LOG)": self.acd_val[idx]["log_acd"],
-                "ACD ERR (LOG)": self.acd_val[idx]["log_error"]
+                "ACD ERR (LOG)": self.acd_val[idx]["log_error"],
                 "EW": self.ew_val[idx]["ew"],
                 "EW ERR": self.ew_val[idx]["error"],
                 "SN AVG": self.sn_avg[idx],
@@ -413,11 +418,11 @@ class X1DSpectrum(BaseSpectrum):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def format_data(datadir=DATADIR, ins="COS", file="X1DSUM", grating="G130M"):
+def collect(datadir=DATADIR, ins="COS", file="X1DSUM", grating="G130M"):
     # this function should build and return the appropriate Spectrum object for measure_aod.py
     # default inputs for instrument and file type are COS and X1D at the moment, for testing
 
-    spectrum = []
+    spectrum = None
 
     # this might (?) need handling for other inputs other than just COS as well. at some point.
     if ins == "COS":
@@ -431,9 +436,9 @@ def format_data(datadir=DATADIR, ins="COS", file="X1DSUM", grating="G130M"):
                     if opt_elem == grating:
                         target_data = f["SCI"].data
                         target = prhd["TARGNAME"]
-                        wave = target_data["WAVELENGTH"]
-                        flux = target_data["FLUX"]
-                        error = target_data["ERROR"]
+                        wave = np.array(target_data["WAVELENGTH"].ravel())  # best way to do this, ravelling here?
+                        flux = np.array(target_data["FLUX"].ravel())
+                        error = np.array(target_data["ERROR"].ravel())
                         spectrum = X1DSpectrum(target, wave, flux, error)
         else:
             print("Other file types are not yet supported at this time.")
@@ -442,7 +447,7 @@ def format_data(datadir=DATADIR, ins="COS", file="X1DSUM", grating="G130M"):
 
     # this needs to be addressed with proper error handling so that it is not referenced before assignment
     if not spectrum:
-        spectrum = []
+        spectrum = None
         print("Spectrum object not built.")
 
     return spectrum
