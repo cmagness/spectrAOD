@@ -1,0 +1,6 @@
+# Pycharm files
+*.idea
+*.pyc
+
+# Mac OSX
+*.DS_Store

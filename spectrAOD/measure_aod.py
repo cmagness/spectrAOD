@@ -1,18 +1,19 @@
 #!/usr/bin/env python
 
-"""This module is for measuring the apparent optical depth of absorption lines in COS Fermi Bubble spectra. The method
-of measurement is outlined in Savage & Sembach 1991. Eventually, this will be extended to measure apparent optical depth
-of other spectra as well."""
+"""This module is for measuring the apparent optical depth of absorption lines
+in COS Fermi Bubble spectra. The method of measurement is outlined in Savage &
+Sembach 1991. Eventually, this will be extended to measure apparent optical
+depth of other spectra as well."""
 
 __author__ = "Camellia Magness"
 __email__ = "cmagness@stsci.edu"
 
-import sys
 import argparse
+import sys
+
+from .format_data import *
 
 # from astropy import constants
-
-from format_data import *
 
 # C = constants.c.to('km/s')  # km/s
 
@@ -21,7 +22,8 @@ OUTDIR = "/user/cmagness/fermi/data/out/"
 
 TARGETS = "/user/cmagness/fermi/code/agn_target_list.csv"
 
-# ----------------------------------------------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 
 
 def parse():
@@ -29,32 +31,43 @@ def parse():
 
     parser = argparse.ArgumentParser(description="spectrAOD")
 
-    parser.add_argument("-instrument", default="COS", type=str, help="observational instrument data is taken on")
-    parser.add_argument("-filetype", default="X1DSUM", type=str, help="file type of data")
-    parser.add_argument("-ion", default="SiIII", type=str, help="absorption line feature of interest")
-    parser.add_argument("-vel_min", default="-100", type=int, help="velocity minimum in window of interest around ion, in km/s")
-    parser.add_argument("-vel_max", default="100", type=int, help="velocity maximum in window of interest around ion, in km/s")
-    parser.add_argument("--grating", default="G130M", type=str, help="optional grating to choose from")
+    parser.add_argument("instrument", default="COS", type=str,
+                        help="observational instrument data is taken on")
+    parser.add_argument("filetype", default="X1DSUM", type=str,
+                        help="file type of data")
+    parser.add_argument("ion", default="SiIII", type=str,
+                        help="absorption line feature of interest")
+    parser.add_argument("vel_min", default="-100", type=int,
+                        help="velocity minimum in window of interest around "
+                             "ion, in km/s")
+    parser.add_argument("vel_max", default="100", type=int,
+                        help="velocity maximum in window of interest around "
+                             "ion, in km/s")
+    parser.add_argument("--grating", default="G130M", type=str,
+                        help="optional grating to choose from")
     # need to set default grating to something for creating Spectrum object
-    # NEED TO DO SOMETHING ABOUT THE FACT THAT COULD HAVE ION LIST IN THE FUTURE
+    # NEED TO DO SOMETHING ABOUT THE FACT THAT COULD HAVE ION LIST IN THE
+    # FUTURE
 
-    # grating evaluation needs some work because it will have to be checked that the ion of interest falls in wavelength
+    # grating evaluation needs some work because it will have to be checked
+    # that the ion of interest falls in wavelength
     # range of the grating
 
     args = parser.parse_args()
-    a = vars(args)
-    print(a)
+    # a = vars(args)
     if args.grating:
-        spectrum = collect(DATADIR, args.instrument, args.filetype, args.grating)
+        spectrum = collect(DATADIR, args.instrument, args.filetype,
+                           args.grating)
     else:
         spectrum = collect(DATADIR, args.instrument, args.filetype)
 
-    # switch the arguments to unpacking with vars() and switch collect to accepting **kw args
+    # switch the arguments to unpacking with vars() and switch collect to
+    # accepting **kw args
 
     return args, spectrum
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 def lsr_correct(args, spectrum):
@@ -66,44 +79,51 @@ def lsr_correct(args, spectrum):
     spectrum.calculate_velocity()
     # find RA & DEC of target from target list
     spectrum.get_coords(TARGETS)
-    # l & b are properties of the spectrum object dependent on RA & DEC and are therefore automatically available
-    # calculate velocity correction & add velocity correction to spectrum object wavelength array (in velocity space)
+    # l & b are properties of the spectrum object dependent on RA & DEC and
+    # are therefore automatically available
+    # calculate velocity correction & add velocity correction to spectrum
+    # object wavelength array (in velocity space)
     spectrum.lsr_correct_velocity()
 
     return spectrum
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 def continuum_fit(spectrum, left=[-450, -300], right=[300, 450]):
-    """This function performs all the calculations relating to the continuum, as well as calculating the normalized flux
+    """This function performs all the calculations relating to the
+    continuum, as well as calculating the normalized flux
     and error arrays"""
 
-    # find indices in spectrum.velocity corresponding to left and right continuum window boundaries
+    # find indices in spectrum.velocity corresponding to left and right
+    # continuum window boundaries
     left_indices = spectrum.find_indices(left)
     right_indices = spectrum.find_indices(right)
-    indices = [left + right for left, right in zip(left_indices, right_indices)]
+    indices = [left + right for left, right in zip(left_indices,
+                                                   right_indices)]
     # calculating means, signal to noise, pixel size, and S/N per resel
     continuum, signalnoise, pixels = spectrum.calculate_continuum(indices)
-    # WE WANT TO ADD THE SN_AVG AS AN ATTRIBUTE FOR THE TABLE AT SOME POINT PROBABLY
-    # calculating fits to continuum windows and updating normalized flux and error attributes
+    # WE WANT TO ADD THE SN_AVG AS AN ATTRIBUTE FOR THE TABLE AT SOME POINT
+    # PROBABLY
+    # calculating fits to continuum windows and updating normalized flux and
+    # error attributes
     spectrum, linear_fits = spectrum.calculate_fits(continuum)
 
     return spectrum
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 def measure(args, spectrum):
-
     # find indices in velocity window (from -100 to 100, for example)
     window = [args.vel_min, args.vel_max]
     indices = spectrum.find_indices(window)
     # make truncated spectrum object to perform these measurements
     helper = Helper(spectrum, indices)
-    # set negative values in flux to percentage of the continuum array (will mark these as saturation)
+    # set negative values in flux to percentage of the continuum array (will
+    # mark these as saturation)
     helper.fix_negatives()
     # calculate apparent optical depth and error
     helper.calculate_aod()
@@ -120,7 +140,7 @@ def measure(args, spectrum):
     return spectrum
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 def main():
@@ -138,7 +158,7 @@ def main():
     return 0
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 if __name__ == "__main__":
