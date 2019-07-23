@@ -287,8 +287,8 @@ class BaseSpectrum:
         # need to add some error handling for if target name is not found in
         # list
         mask = df_targets["Target"] == self.target
-        self.ra = (df_targets.loc[mask]["RA"]).values
-        self.dec = (df_targets.loc[mask]["DEC"]).values
+        self.ra = df_targets.loc[mask]["RA"]
+        self.dec = df_targets.loc[mask]["DEC"]
         self._skycoords = SkyCoord(ra=self.ra * u.degree,
                                    dec=self.dec * u.degree)
 
@@ -300,6 +300,7 @@ class BaseSpectrum:
         vel_corr = (9.0 * np.cos(l_radians) * np.cos(b_radians)) + (
                     12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
+        print(vel_corr, vel_corr[0])
         for idx in np.arange(len(self.velocity)):
             self.velocity[idx] = self.velocity[idx] + vel_corr[0]
 
@@ -307,13 +308,10 @@ class BaseSpectrum:
         # this method finds the indices for a velocity window for each
         # velocity array
         indices = []
-        for idx in np.arange(len(self.velocity)):
+        for idx in np.arange(len(self.velocity) + 1):
             index_row = []
             for val in window:
-                abs_velocity_diff = np.abs(self.velocity[idx] - val)
-                closest_index = abs_velocity_diff.argmin()
-                index_row.append(closest_index)
-                # index_row.append((np.abs(self.velocity[idx] - val)).argmin())
+                index_row.append((np.abs(self.velocity[idx] - val)).argmin())
                 # this finds smallest deviation from val
                 # and gets index associated with it
             indices.append(index_row)
@@ -382,29 +380,22 @@ class BaseSpectrum:
         # this method calculates the linear fits to the continuum windows
         # and calculates the normalized arrays
         linear_fits = []
-        calculated_lists = {
-            "continuum_arrays": [], "normalized_fluxes": [],
-            "normalized_errors": []
-            }
+        lists = []
         for idx, cdict in enumerate(continuum):
-            slope = (cdict["flux"][1] - cdict["flux"][0]) / \
-                    (cdict["velocity"][1] - cdict["velocity"][0])
-            # right - left f/v
+            slope = (cdict["flux"][1] - cdict["flux"][0]) / (
+                    cdict["velocity"][1] - cdict["velocity"][
+                0])  # right - left f/v
             yint = cdict["flux"][0] - (slope * cdict["velocity"][0])
             continuum_array = (slope * self.velocity[idx]) + yint
             normalized_flux = self.flux / continuum_array
             normalized_error = self.error / continuum_array
             fit_row = [slope, yint]
+            list_row = [continuum_array, normalized_flux, normalized_error]
             linear_fits.append(fit_row)
-            calculated_lists["continuum_arrays"].append(continuum_array)
-            calculated_lists["normalized_fluxes"].append(normalized_flux)
-            calculated_lists["normalized_errors"].append(normalized_error)
-        self.continuum = calculated_lists["continuum_arrays"]
-        # list of calculated continuums
-        self.norm_flux = calculated_lists["normalized_fluxes"]
-        # list of normalized fluxes
-        self.norm_error = calculated_lists["normalized_errors"]
-        # list of normalized errors
+            lists.append(list_row)
+        self.continuum = lists[0]  # list of calculated continuums
+        self.norm_flux = lists[1]  # list of normalized fluxes
+        self.norm_error = lists[2]  # list of normalized errors
 
         return self, fits
 
