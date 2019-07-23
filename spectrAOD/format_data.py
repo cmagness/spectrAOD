@@ -287,8 +287,8 @@ class BaseSpectrum:
         # need to add some error handling for if target name is not found in
         # list
         mask = df_targets["Target"] == self.target
-        self.ra = df_targets.loc[mask]["RA"]
-        self.dec = df_targets.loc[mask]["DEC"]
+        self.ra = (df_targets.loc[mask]["RA"]).values
+        self.dec = (df_targets.loc[mask]["DEC"]).values
         self._skycoords = SkyCoord(ra=self.ra * u.degree,
                                    dec=self.dec * u.degree)
 
@@ -300,7 +300,6 @@ class BaseSpectrum:
         vel_corr = (9.0 * np.cos(l_radians) * np.cos(b_radians)) + (
                     12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
-        print(vel_corr, vel_corr[0])
         for idx in np.arange(len(self.velocity)):
             self.velocity[idx] = self.velocity[idx] + vel_corr[0]
 
@@ -308,10 +307,13 @@ class BaseSpectrum:
         # this method finds the indices for a velocity window for each
         # velocity array
         indices = []
-        for idx in np.arange(len(self.velocity) + 1):
+        for idx in np.arange(len(self.velocity)):
             index_row = []
             for val in window:
-                index_row.append((np.abs(self.velocity[idx] - val)).argmin())
+                abs_velocity_diff = np.abs(self.velocity[idx] - val)
+                closest_index = abs_velocity_diff.argmin()
+                index_row.append(closest_index)
+                # index_row.append((np.abs(self.velocity[idx] - val)).argmin())
                 # this finds smallest deviation from val
                 # and gets index associated with it
             indices.append(index_row)
