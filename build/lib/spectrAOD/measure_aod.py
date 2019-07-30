@@ -11,7 +11,7 @@ __email__ = "cmagness@stsci.edu"
 import argparse
 import sys
 
-from format_data import *
+from .format_data import *
 
 # from astropy import constants
 
@@ -31,21 +31,20 @@ def parse():
 
     parser = argparse.ArgumentParser(description="spectrAOD")
 
-    parser.add_argument("--instrument", default="COS", type=str,
+    parser.add_argument("instrument", default="COS", type=str,
                         help="observational instrument data is taken on")
-    parser.add_argument("--filetype", default="X1DSUM", type=str,
+    parser.add_argument("filetype", default="X1DSUM", type=str,
                         help="file type of data")
-    parser.add_argument("--ion", default="SiIV", type=str,
+    parser.add_argument("ion", default="SiIII", type=str,
                         help="absorption line feature of interest")
-    parser.add_argument("--vel_min", default="-100", type=int,
+    parser.add_argument("vel_min", default="-100", type=int,
                         help="velocity minimum in window of interest around "
                              "ion, in km/s")
-    parser.add_argument("--vel_max", default="100", type=int,
+    parser.add_argument("vel_max", default="100", type=int,
                         help="velocity maximum in window of interest around "
                              "ion, in km/s")
     parser.add_argument("--grating", default="G130M", type=str,
                         help="optional grating to choose from")
-    # need to set up better debugging system than defaults. debugging flag?
     # need to set default grating to something for creating Spectrum object
     # NEED TO DO SOMETHING ABOUT THE FACT THAT COULD HAVE ION LIST IN THE
     # FUTURE
@@ -109,9 +108,6 @@ def continuum_fit(spectrum, left=[-450, -300], right=[300, 450]):
     # PROBABLY
     # calculating fits to continuum windows and updating normalized flux and
     # error attributes
-
-    # note: pixels is empty at this point after the test run
-    # this needs investigating
     spectrum, linear_fits = spectrum.calculate_fits(continuum)
 
     return spectrum

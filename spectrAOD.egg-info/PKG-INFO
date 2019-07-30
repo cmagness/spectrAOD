@@ -1,0 +1,35 @@
+Metadata-Version: 2.1
+Name: spectrAOD
+Version: 0.0.1
+Summary: This package is for measuring the apparent optical depth of spectra
+Home-page: https://github.com/cmagness/spectrAOD
+Author: Camellia Magness
+Author-email: cmagness@stsci.edu
+License: UNKNOWN
+Description: Spectr A O D
+        ------------
+        readme coming soon
+        
+        
+        Installation
+        ------------
+        
+        
+        Contributing Code, Documentation, or Feedback
+        ---------------------------------------------
+        
+        
+        3rd Party Libraries this package requires
+        -----------------------------------------
+        
+        
+        License
+        -------
+Platform: UNKNOWN
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Topic :: Scientific/Engineering :: Astronomy
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Description-Content-Type: text/markdown
