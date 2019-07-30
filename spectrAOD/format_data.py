@@ -440,34 +440,39 @@ class BaseSpectrum:
                 "ACD (LOG)", "ACD ERR (LOG)", "EW", "EW ERR", "SN AVG",
                 "SN/RESEL", "SIG", "DETECTION"]
         df = pd.DataFrame(columns=cols)
-        for idx, row in enumerate(self.velocity):
-            # don't really need to itr over velocity i guess. just the length
+        for idx in np.arange(len(self.velocity)):
             df = df.append(pd.Series({
                 "TARGET": self.target,
-                "RA": self.ra[0],
-                "DEC": self.dec[0],
+                "RA": "{:.2}".format(self.ra[0]),
+                "DEC": "{:.2}".format(self.dec[0]),
                 "ION": self.ions["ion"][idx],
-                "WAVELENGTH": self.ions["wv"][idx],
+                "WAVELENGTH": "{:.2}".format(self.ions["wv"][idx]),
                 "VEL MIN": vel_min,
                 "VEL MAX": vel_max,
-                "AOD": self.aod_val[idx]["aod"],
-                "AOD ERR": self.aod_val[idx]["error"],
-                "ACD (LIN)": self.acd_val[idx]["linear_acd"],
-                "ACD ERR (LIN)": self.acd_val[idx]["linear_error"],
-                "ACD (LOG)": self.acd_val[idx]["log_acd"],
-                "ACD ERR (LOG)": self.acd_val[idx]["log_error"],
-                "EW": self.ew_val[idx]["ew"],
-                "EW ERR": self.ew_val[idx]["error"],
-                "SN AVG": self.sn_avg[idx],
-                "SN/RESEL": self.sn_res[idx],
-                "SIG": self.sig[idx],
+                "AOD": "{:.2e}".format(self.aod_val[idx]["aod"]),
+                "AOD ERR": "{:.2e}".format(self.aod_val[idx]["error"]),
+                "ACD (LIN)": "{:.2e}".format(self.acd_val[idx]["linear_acd"]),
+                "ACD ERR (LIN)": "{:.2e}".format(self.acd_val[idx][
+                    "linear_error"]),
+                "ACD (LOG)": "{:.2e}".format(self.acd_val[idx]["log_acd"]),
+                "ACD ERR (LOG)": "{:.2e}".format(self.acd_val[idx][
+                                                     "log_error"]),
+                "EW": "{:.2e}".format(self.ew_val[idx]["ew"]),
+                "EW ERR": "{:.2e}".format(self.ew_val[idx]["error"]),
+                "SN AVG": "{:.2e}".format(self.sn_avg[idx]),
+                "SN/RESEL": "{:.2e}".format(self.sn_res[idx]),
+                "SIG": "{:.2e}".format(self.sig[idx]),
                 "DETECTION": self.detection[idx]
                 }, name="row_{}".format(idx + 1)))
         # ok really the _val properties COULD be properties of this class
         # instead of properties of the helper class, which would eliminate
         # the need to pass them between the classes -- consider this in
         # refactoring
-        df.to_csv(os.path.join(OUTDIR + "measurements.csv"))
+        outfile = OUTDIR + "measurements.csv"
+        if os.path.exists(outfile):
+            os.remove(outfile)
+            # it's getting corrupted if i don't do this?
+        df.to_csv(os.path.join(outfile))
 
     def to_fits(self):
         # this method should generate a fits file
