@@ -49,19 +49,22 @@ class Helper:
             "velocity": [], "flux": [], "error": [], "continuum": [],
             "continuum_error": [], "delta": []
         }
-        for idx, velocity in spectrum.velocity:
-            truncated_dict["velocity"].append(velocity[indices[0]:indices[1]])
-            truncated_dict["flux"].append(spectrum.flux[indices[0]:indices[1]])
-            truncated_dict["error"].append(
-                spectrum.norm_error[indices[0]:indices[1]])
-            truncated_continuum = spectrum.continuum[idx][
-                                  indices[0]:indices[1]]
-            truncated_dict["continuum"].append(truncated_continuum)
-            continuum_error = 0.05 * truncated_continuum
+        for idx, velocity in enumerate(spectrum.velocity):
+            # truncated arrays in feature window corresponding to indices
+            vel_window = velocity[indices[0][0]:indices[0][1]]
+            flux_window = spectrum.flux[indices[0][0]:indices[0][1]]
+            norm_err_window = spectrum.norm_error[idx][
+                              indices[0][0]:indices[0][1]]
+            cont_window = spectrum.continuum[idx][indices[0][0]:indices[0][1]]
             # 5% continuum fitting error
-            truncated_dict["continuum_error"].append(continuum_error)
-            truncated_dict["delta"].append(
-                spectrum.delta[idx][indices[0]:indices[1]])
+            cont_err_window = 0.05 * cont_window
+            delta_window = spectrum.delta[idx][indices[0][0]:indices[0][1]]
+            truncated_dict["velocity"].append(vel_window)
+            truncated_dict["flux"].append(flux_window)
+            truncated_dict["error"].append(norm_err_window)
+            truncated_dict["continuum"].append(cont_window)
+            truncated_dict["continuum_error"].append(cont_err_window)
+            truncated_dict["delta"].append(delta_window)
         self.velocity = truncated_dict["velocity"]
         self.flux = truncated_dict["flux"]
         self.error = truncated_dict["error"]
@@ -77,9 +80,11 @@ class Helper:
     def fix_negatives(self):
         # this method fixes any negative (and therefore unphysical) flux values
         for idx, subflux in enumerate(self.flux):
+            subflux = list(subflux)
             if any(val < 0 for val in subflux):
-                self.flux[idx] = np.array([self.continuum[idx][subflux.index(
-                    val)] * 0.01 if val < 0 else val for val
+                self.flux[idx] = np.array([self.continuum[idx]
+                                           [subflux.index(val)]
+                                           * 0.01 if val < 0 else val for val
                                            in subflux])
 
     def calculate_aod(self):
@@ -88,7 +93,7 @@ class Helper:
         for idx, subflux in enumerate(self.flux):
             aod_row = np.log(self.continuum[idx] / subflux)
             cont_err = self.cont_error[idx] / self.continuum[idx]
-            flux_err = self.error / subflux
+            flux_err = self.error[idx] / subflux
             total_err = np.sqrt(cont_err ** 2 + flux_err ** 2)
 
             aod.append({"aod": aod_row, "error": total_err})
@@ -112,12 +117,13 @@ class Helper:
 
     def calculate_acd(self):
         # this method calculates the apparent column density and error
+        # from the aod measurements
         acd = []
-        for idx, subacd in enumerate(self.aod):
+        for idx, subaod in enumerate(self.aod):
             acd_row = N / (self.ions["wv"][idx] * self.ions["f"][idx]) * \
-                      subacd["acd"]
+                      subaod["aod"]
             acd_err = N / (self.ions["wv"][idx] * self.ions["f"][idx]) * \
-                      subacd["error"]
+                      subaod["error"]
 
             acd.append({"acd": acd_row, "error": acd_err})
         self.acd = acd
@@ -149,11 +155,11 @@ class Helper:
         # this method calculates the equivalent width and error
         ew = []
         for idx, subflux in enumerate(self.flux):
-            ew_row = (self.ions["wv"][idx] / C) * self.delta * (
+            ew_row = (self.ions["wv"][idx] / C) * self.delta[idx] * (
                         1.0 - (subflux / self.continuum[idx]))
-            cont_err = self.delta * subflux * (
+            cont_err = self.delta[idx] * subflux * (
                         self.cont_error[idx] / self.continuum[idx] ** 2)
-            flux_err = self.delta * self.error / subflux
+            flux_err = self.delta[idx] * self.error[idx] / subflux
             total_err = (self.ions["wv"][idx] / C) * np.sqrt(
                 cont_err ** 2 + flux_err ** 2)
 
@@ -177,11 +183,9 @@ class Helper:
     def significance(self):
         # this method determines the significance of the measurement,
         # checks for saturation & non detections
-        sig_boolean = []
-        sig = []
-        for subdict in self.ew_val:
-            sig_boolean.extend((subdict["ew"] >= 3.0 * subdict["error"]))
-            sig.extend(subdict["ew"] / subdict["error"])
+        sig_boolean = [(subdict["ew"] >= 3.0 * subdict["error"]) for subdict in
+                       self.ew_val]
+        sig = [(subdict["ew"] / subdict["error"]) for subdict in self.ew_val]
         self.sig = sig
 
         detection = []
@@ -271,10 +275,19 @@ class BaseSpectrum:
         # this method calculates the wavelength in velocity space wrt to the
         # ion of interest and stores it
         vels = []
-        for wv in self.ions["wv"]:
-            z_array = (self.wave - wv) / wv
-            vel_array = C * z_array
-            vels.append(vel_array)
+        for idx, wv in enumerate(self.ions["wv"]):
+            if wv >= min(self.wave) and wv <= max(self.wave):
+                z_array = (self.wave - wv) / wv
+                vel_array = C * z_array
+                vels.append(vel_array)
+            else:
+                print("The ion ({}, {}) you are attempting to measure is "
+                      "outside of the wavelength range of this spectrum ({}, "
+                      "{}).".format(self.ions["ion"][idx], wv, min(self.wave),
+                                   max(self.wave)))
+        if not vels:
+            print("There are no valid ions to measure. Exiting now.")
+            raise SystemExit
         self.velocity = vels
         # eventually will need to keep track of ion associated with the
         # velocity array in a dictionary maybe?
@@ -358,7 +371,7 @@ class BaseSpectrum:
             delta = (upper - lower) / 2.0
             delta = np.insert(delta, 0, delta[0])
             dv_row = np.insert(delta, len(delta), delta[-1])
-            dv.append([dv_row])
+            dv.append(dv_row)
 
         self.sn_avg = [sn_row[-1] for sn_row in signalnoise]
         self.delta = dv
@@ -428,11 +441,13 @@ class BaseSpectrum:
                 "SN/RESEL", "SIG", "DETECTION"]
         df = pd.DataFrame(columns=cols)
         for idx, row in enumerate(self.velocity):
-            df.append({
+            # don't really need to itr over velocity i guess. just the length
+            df = df.append(pd.Series({
                 "TARGET": self.target,
-                "RA": self.ra,
-                "DEC": self.dec,
-                "ION": self.ions[idx],
+                "RA": self.ra[0],
+                "DEC": self.dec[0],
+                "ION": self.ions["ion"][idx],
+                "WAVELENGTH": self.ions["wv"][idx],
                 "VEL MIN": vel_min,
                 "VEL MAX": vel_max,
                 "AOD": self.aod_val[idx]["aod"],
@@ -447,7 +462,7 @@ class BaseSpectrum:
                 "SN/RESEL": self.sn_res[idx],
                 "SIG": self.sig[idx],
                 "DETECTION": self.detection[idx]
-                })
+                }, name="row_{}".format(idx + 1)))
         # ok really the _val properties COULD be properties of this class
         # instead of properties of the helper class, which would eliminate
         # the need to pass them between the classes -- consider this in

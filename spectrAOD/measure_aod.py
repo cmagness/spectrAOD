@@ -35,7 +35,7 @@ def parse():
                         help="observational instrument data is taken on")
     parser.add_argument("--filetype", default="X1DSUM", type=str,
                         help="file type of data")
-    parser.add_argument("--ion", default="SiIII", type=str,
+    parser.add_argument("--ion", default="SiIV", type=str,
                         help="absorption line feature of interest")
     parser.add_argument("--vel_min", default="-100", type=int,
                         help="velocity minimum in window of interest around "
