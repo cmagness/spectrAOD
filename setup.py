@@ -1,9 +1,9 @@
-import setuptools
+from setuptools import setup, find_packages
 
 with open("README.md", "r") as f:
     long_description = f.read()
 
-setuptools.setup(
+setup(
     name="spectrAOD",
     version="0.0.1",
     author="Camellia Magness",
@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cmagness/spectrAOD",
-    packages=setuptools.find_packages(),
+    keywords=['astronomy'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
@@ -21,5 +21,15 @@ setuptools.setup(
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-)
-
+    python_requires='>=3.5',  # 3.5 and higher
+    packages=find_packages(),
+    install_requires=[
+        'setuptools',
+        'numpy',
+        'astropy',
+        'pandas',
+        'argparse'
+        ]
+    # dependency_links=[],
+    # entry_points={}
+    )

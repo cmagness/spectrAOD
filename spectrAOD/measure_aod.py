@@ -126,9 +126,11 @@ def measure(args, spectrum):
     indices = spectrum.find_indices(window)
     # make truncated spectrum object to perform these measurements
     helper = Helper(spectrum, indices)
+    # fix negative zeroes in error
+    helper.error = helper.fix_negatives(helper.error)
     # set negative values in flux to percentage of the continuum array (will
     # mark these as saturation)
-    helper.fix_negatives()
+    helper.flux = helper.fix_negatives(helper.flux, fixes="negatives")
     # calculate apparent optical depth and error
     helper.calculate_aod()
     # calculate apparent column density and error
