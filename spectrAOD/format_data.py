@@ -26,6 +26,7 @@ N = 3.768e14  # proportionality constant -> (m_e * c)/(pi * e**2)
 
 OUTDIR = "/user/cmagness/fermi/data/out/"  # this is unused at this time but
 # will be eventually
+# TODO: come up with some configuration for this kind of stuff
 
 
 # at some point need to check and see if outdir (and datadir, really too)
@@ -52,18 +53,20 @@ class Helper:
         for idx, velocity in enumerate(spectrum.velocity):
             # truncated arrays in feature window corresponding to indices
             vel_window = velocity[indices[0][0]:indices[0][1]]
-            flux_window = spectrum.flux[indices[0][0]:indices[0][1]]
+            norm_flux_window = spectrum.norm_flux[idx][indices[0][0]:indices[
+                0][1]]
             norm_err_window = spectrum.norm_error[idx][
                               indices[0][0]:indices[0][1]]
             cont_window = spectrum.continuum[idx][indices[0][0]:indices[0][1]]
             # 5% continuum fitting error
             cont_err_window = 0.05 * cont_window
+            norm_cont_err_window = cont_err_window / cont_window
             delta_window = spectrum.delta[idx][indices[0][0]:indices[0][1]]
             truncated_dict["velocity"].append(vel_window)
-            truncated_dict["flux"].append(flux_window)
+            truncated_dict["flux"].append(norm_flux_window)
             truncated_dict["error"].append(norm_err_window)
             truncated_dict["continuum"].append(cont_window)
-            truncated_dict["continuum_error"].append(cont_err_window)
+            truncated_dict["continuum_error"].append(norm_cont_err_window)
             truncated_dict["delta"].append(delta_window)
         self.velocity = truncated_dict["velocity"]
         self.flux = truncated_dict["flux"]
@@ -77,23 +80,28 @@ class Helper:
         self.sig = None
         self.detection = None
 
-    def fix_negatives(self):
-        # this method fixes any negative (and therefore unphysical) flux values
-        for idx, subflux in enumerate(self.flux):
-            subflux = list(subflux)
-            if any(val < 0 for val in subflux):
-                self.flux[idx] = np.array([self.continuum[idx]
-                                           [subflux.index(val)]
-                                           * 0.01 if val < 0 else val for val
-                                           in subflux])
+    def fix_negatives(self, arrays, fixes="zeroes"):
+        # this function fixes any negative (and therefore unphysical) flux
+        # values
+        # fix -0s to 0 in any other helper array by default
+        for idx, subarray in enumerate(arrays):
+            sublist = list(subarray)
+            if fixes == "zeroes" and any(val == -0 for val in sublist):
+                arrays[idx] = np.array([0 if val == -0 else val for val in
+                                        sublist])
+            if fixes == "negatives" and any(val < 0 for val in sublist):
+                arrays[idx] = np.array([self.continuum[idx][sublist.index(
+                    val)] * 0.01 if val < 0 else val for val in sublist])
+
+        return arrays
 
     def calculate_aod(self):
         # this method calculates the apparent optical depth and error
         aod = []
         for idx, subflux in enumerate(self.flux):
-            aod_row = np.log(self.continuum[idx] / subflux)
-            cont_err = self.cont_error[idx] / self.continuum[idx]
-            flux_err = self.error[idx] / subflux
+            aod_row = np.log(1 / subflux)  # this is 1/norm_flux or cont/flux
+            cont_err = self.cont_error[idx]
+            flux_err = self.error[idx]
             total_err = np.sqrt(cont_err ** 2 + flux_err ** 2)
 
             aod.append({"aod": aod_row, "error": total_err})
@@ -156,10 +164,9 @@ class Helper:
         ew = []
         for idx, subflux in enumerate(self.flux):
             ew_row = (self.ions["wv"][idx] / C) * self.delta[idx] * (
-                        1.0 - (subflux / self.continuum[idx]))
-            cont_err = self.delta[idx] * subflux * (
-                        self.cont_error[idx] / self.continuum[idx] ** 2)
-            flux_err = self.delta[idx] * self.error[idx] / subflux
+                        1.0 - subflux)
+            cont_err = self.delta[idx] * subflux * self.cont_error[idx]
+            flux_err = self.delta[idx] * self.error[idx]
             total_err = (self.ions["wv"][idx] / C) * np.sqrt(
                 cont_err ** 2 + flux_err ** 2)
 
@@ -190,7 +197,7 @@ class Helper:
 
         detection = []
         for idx, subflux in enumerate(self.flux):
-            minimum = min(subflux / self.continuum[idx])
+            minimum = min(subflux)
             cutoff = 1 / (self.sn_avg[idx])
             if minimum > cutoff:
                 if sig_boolean[idx]:
@@ -440,34 +447,39 @@ class BaseSpectrum:
                 "ACD (LOG)", "ACD ERR (LOG)", "EW", "EW ERR", "SN AVG",
                 "SN/RESEL", "SIG", "DETECTION"]
         df = pd.DataFrame(columns=cols)
-        for idx, row in enumerate(self.velocity):
-            # don't really need to itr over velocity i guess. just the length
+        for idx in np.arange(len(self.velocity)):
             df = df.append(pd.Series({
                 "TARGET": self.target,
-                "RA": self.ra[0],
-                "DEC": self.dec[0],
+                "RA": "{:.2}".format(self.ra[0]),
+                "DEC": "{:.2}".format(self.dec[0]),
                 "ION": self.ions["ion"][idx],
-                "WAVELENGTH": self.ions["wv"][idx],
+                "WAVELENGTH": "{:.2}".format(self.ions["wv"][idx]),
                 "VEL MIN": vel_min,
                 "VEL MAX": vel_max,
-                "AOD": self.aod_val[idx]["aod"],
-                "AOD ERR": self.aod_val[idx]["error"],
-                "ACD (LIN)": self.acd_val[idx]["linear_acd"],
-                "ACD ERR (LIN)": self.acd_val[idx]["linear_error"],
-                "ACD (LOG)": self.acd_val[idx]["log_acd"],
-                "ACD ERR (LOG)": self.acd_val[idx]["log_error"],
-                "EW": self.ew_val[idx]["ew"],
-                "EW ERR": self.ew_val[idx]["error"],
-                "SN AVG": self.sn_avg[idx],
-                "SN/RESEL": self.sn_res[idx],
-                "SIG": self.sig[idx],
+                "AOD": "{:.2e}".format(self.aod_val[idx]["aod"]),
+                "AOD ERR": "{:.2e}".format(self.aod_val[idx]["error"]),
+                "ACD (LIN)": "{:.2e}".format(self.acd_val[idx]["linear_acd"]),
+                "ACD ERR (LIN)": "{:.2e}".format(self.acd_val[idx][
+                    "linear_error"]),
+                "ACD (LOG)": "{:.2e}".format(self.acd_val[idx]["log_acd"]),
+                "ACD ERR (LOG)": "{:.2e}".format(self.acd_val[idx][
+                                                     "log_error"]),
+                "EW": "{:.2e}".format(self.ew_val[idx]["ew"]),
+                "EW ERR": "{:.2e}".format(self.ew_val[idx]["error"]),
+                "SN AVG": "{:.2e}".format(self.sn_avg[idx]),
+                "SN/RESEL": "{:.2e}".format(self.sn_res[idx]),
+                "SIG": "{:.2e}".format(self.sig[idx]),
                 "DETECTION": self.detection[idx]
                 }, name="row_{}".format(idx + 1)))
         # ok really the _val properties COULD be properties of this class
         # instead of properties of the helper class, which would eliminate
         # the need to pass them between the classes -- consider this in
         # refactoring
-        df.to_csv(os.path.join(OUTDIR + "measurements.csv"))
+        outfile = OUTDIR + "measurements.csv"
+        if os.path.exists(outfile):
+            os.remove(outfile)
+            # it's getting corrupted if i don't do this?
+        df.to_csv(os.path.join(outfile))
 
     def to_fits(self):
         # this method should generate a fits file

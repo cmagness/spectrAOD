@@ -1,9 +1,0 @@
-README.md
-setup.py
-spectrAOD/__init__.py
-spectrAOD/format_data.py
-spectrAOD/measure_aod.py
-spectrAOD.egg-info/PKG-INFO
-spectrAOD.egg-info/SOURCES.txt
-spectrAOD.egg-info/dependency_links.txt
-spectrAOD.egg-info/top_level.txt
