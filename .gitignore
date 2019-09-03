@@ -22,3 +22,9 @@ var/
 *.egg-info/*
 .installed.cfg
 *.egg
+
+# Configuration
+settings.yaml
+
+# Debugging
+debug.py

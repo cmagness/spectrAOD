@@ -8,7 +8,8 @@ setup(
     version="0.0.1",
     author="Camellia Magness",
     author_email="cmagness@stsci.edu",
-    description="This package is for measuring the apparent optical depth of spectra",
+    description="This package is for measuring the apparent optical depth of "
+                "spectra",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cmagness/spectrAOD",
@@ -20,7 +21,7 @@ setup(
         'Programming Language :: Python',
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Software Development :: Libraries :: Python Modules',
-    ],
+        ],
     python_requires='>=3.5',  # 3.5 and higher
     packages=find_packages(),
     install_requires=[
@@ -29,7 +30,7 @@ setup(
         'astropy',
         'pandas',
         'argparse'
-        ]
+        ],
+    entry_points={'console_scripts': ['measure=spectrAOD.measure_aod:main']}
     # dependency_links=[],
-    # entry_points={}
     )

@@ -1,0 +1,17 @@
+inputs:
+  datadir: # string: path to data
+  outdir: # string: path to output directory
+  targets: # string: path to target list
+
+parameters:
+  instrument: # string: instrument
+  filetype: # string: filetype
+  vel_min: # int: minimum number for velocity window in km/s
+  vel_max: # int: maximum number for velocity window in km/s"
+  grating: # string: grating
+  # will need to deal with situations where there are no gratings in the future
+
+defaults:
+  continuum_left: [-450, -300]
+  continuum_right: [300, 450]
+  all_ions: "./mini_ions.csv"
