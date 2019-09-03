@@ -499,8 +499,24 @@ class X1DSpectrum(BaseSpectrum):
         pass
 
     # we're gonna wanna add other things we can capture with x1d spectra
-    # here later. which will also require updates to
-    # that part of the if statement in format data
+    # here later
+
+
+# --------------------------------------------------------------------------- #
+
+
+class ASCIISpectrum(BaseSpectrum):
+    """This class inherits the base Spectrum class for specifically ascii
+    files and will have methods for holding
+    other ascii specific information."""
+
+    def __init__(self, *args):
+        super().__init__(*args)
+
+    def ascii_specs(self):
+        # this method could hold other x1d specific stuff, like header
+        # information of interest
+        pass
 
 
 # --------------------------------------------------------------------------- #
