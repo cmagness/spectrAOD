@@ -8,15 +8,17 @@ measure_aod.py to perform the measurements."""
 __author__ = "Camellia Magness"
 __email__ = "cmagness@stsci.edu"
 
+import os
 import sys
 import glob
 
 import numpy as np
 from astropy import constants
 from astropy.io import fits
+from astropy.io import ascii
 
 from . import SETTINGS
-from .spectrum_classes import X1DSpectrum
+from .spectrum_classes import X1DSpectrum, ASCIISpectrum
 
 INPUTS = SETTINGS["inputs"]
 DATADIR = INPUTS["datadir"]
@@ -65,6 +67,37 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                         flux = np.array(target_data["FLUX"].ravel())
                         error = np.array(target_data["ERROR"].ravel())
                         spectrum = X1DSpectrum(target, wave, flux, error)
+        elif file == "BART":
+            search_string = "_spec-{}".format(grating)
+            asciis = glob.glob(datadir + "*" + search_string)
+            # multiple asciis??
+            for ascii_file in asciis:
+                basename = os.path.basename(ascii_file)
+                # this can be done better
+                target = basename.replace(search_string, "")
+                data = ascii.read(ascii_file, names=["wave", "flux", "error"])
+                if len(data.columns) > 3:
+                    raise IndexError("Too many columns")
+                    # choose a better error type?
+                wave = np.array(data.columns["wave"])
+                flux = np.array(data.columns["flux"])
+                error = np.array(data.columns["error"])
+                spectrum = ASCIISpectrum(target, wave, flux, error)
+        elif file == "BART-N":
+            search_string = "_spec-{}-N".format(grating)
+            asciis = glob.glob(datadir + "*" + search_string)
+            for ascii_file in asciis:
+                basename = os.path.basename(ascii_file)
+                # this can be done better
+                target = basename.replace(search_string, "")
+                data = ascii.read(ascii_file, names=["wave", "flux", "error"])
+                if len(data.columns) > 3:
+                    raise IndexError("Too many columns")
+                    # choose a better error type?
+                wave = np.array(data.columns["wave"])
+                flux = np.array(data.columns["flux"])
+                error = np.array(data.columns["error"])
+                spectrum = ASCIISpectrum(target, wave, flux, error)
         else:
             print("Other file types are not yet supported at this time.")
     else:
