@@ -444,25 +444,25 @@ class BaseSpectrum:
         for idx in np.arange(len(self.velocity)):
             df = df.append(pd.Series({
                 "TARGET": self.target,
-                "RA": "{:.2}".format(self.ra[0]),
-                "DEC": "{:.2}".format(self.dec[0]),
+                "RA": "{:.2f}".format(self.ra[0]),
+                "DEC": "{:.2f}".format(self.dec[0]),
                 "ION": self.ions["ion"][idx],
-                "WAVELENGTH": "{:.2}".format(self.ions["wv"][idx]),
+                "WAVELENGTH": "{:4.2f}".format(self.ions["wv"][idx]),
                 "VEL MIN": vel_min,
                 "VEL MAX": vel_max,
-                "AOD": "{:.2e}".format(self.aod_val[idx]["aod"]),
-                "AOD ERR": "{:.2e}".format(self.aod_val[idx]["error"]),
-                "ACD (LIN)": "{:.2e}".format(self.acd_val[idx]["linear_acd"]),
-                "ACD ERR (LIN)": "{:.2e}".format(self.acd_val[idx][
+                "AOD": "{:.3e}".format(self.aod_val[idx]["aod"]),
+                "AOD ERR": "{:.3e}".format(self.aod_val[idx]["error"]),
+                "ACD (LIN)": "{:.3e}".format(self.acd_val[idx]["linear_acd"]),
+                "ACD ERR (LIN)": "{:.3e}".format(self.acd_val[idx][
                     "linear_error"]),
-                "ACD (LOG)": "{:.2e}".format(self.acd_val[idx]["log_acd"]),
-                "ACD ERR (LOG)": "{:.2e}".format(self.acd_val[idx][
+                "ACD (LOG)": "{:2.3f}".format(self.acd_val[idx]["log_acd"]),
+                "ACD ERR (LOG)": "{:2.3f}".format(self.acd_val[idx][
                                                      "log_error"]),
-                "EW": "{:.2e}".format(self.ew_val[idx]["ew"]),
-                "EW ERR": "{:.2e}".format(self.ew_val[idx]["error"]),
-                "SN AVG": "{:.2e}".format(self.sn_avg[idx]),
-                "SN/RESEL": "{:.2e}".format(self.sn_res[idx]),
-                "SIG": "{:.2e}".format(self.sig[idx]),
+                "EW": "{:.3f}".format(self.ew_val[idx]["ew"]),
+                "EW ERR": "{:.3f}".format(self.ew_val[idx]["error"]),
+                "SN AVG": "{:.1f}".format(self.sn_avg[idx]),
+                "SN/RESEL": "{:.1f}".format(self.sn_res[idx]),
+                "SIG": "{:.1f}".format(self.sig[idx]),
                 "DETECTION": self.detection[idx]
                 }, name="row_{}".format(idx + 1)))
         # ok really the _val properties COULD be properties of this class
@@ -471,7 +471,16 @@ class BaseSpectrum:
         # refactoring
         if not os.path.exists(OUTDIR):
             os.makedirs(OUTDIR)
-        outfile = OUTDIR + "measurements.csv"
+        ions_string = self.ions["ion"][0]
+        for ion in self.ions["ion"][1:]:
+            ions_string += "_{}".format(ion)
+
+        if len(self.target) < 10:
+            target_string = self.target
+        else:
+            target_string = self.target[0:10]
+        outfile = OUTDIR + "{}_{}_measurements.csv".format(target_string, ions_string)
+        
         if os.path.exists(outfile):
             os.remove(outfile)
             # it's getting corrupted if i don't do this?
