@@ -58,7 +58,8 @@ def parse():
                         type=str, help="observational instrument data is taken"
                                        "on")
     parser.add_argument("--filetype", default=PARAMETERS["filetype"], type=str,
-                        help="filetype of data")
+                        help="filetype of data, takes X1DSUM (for x1ds or "
+                             "x1dsums), BART, and BART-N")
     parser.add_argument("--vel_min", default=PARAMETERS["vel_min"], type=int,
                         help="velocity minimum in window of interest around "
                              "ion, in km/s")
