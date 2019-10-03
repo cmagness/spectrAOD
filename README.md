@@ -15,9 +15,10 @@ SpectrAOD
 
 Installation
 ------------
-This package will soon be registered on PyPI and complete with its own 
-environment file specifications, but until then you'll have to install it 
-the old fashioned way. You will need a working, and preferably current 
+
+This package is registered on PyPI and available via `pip`. We also offer 
+instructions on how to install from cloning the repository for the latest 
+version, between published releases. You will need a working, and preferably current 
 version of Anaconda.
 
 ##### Make a new environment
@@ -30,7 +31,18 @@ conda activate <environment_name>
 ```
 We recommend a short and simple name for the environment such as `spectraod`.
 
+##### Install with `pip`
+
+From the command line, in your new environment:
+```
+pip install spectrAOD==0.0.1
+```
+
+You can drop the version number and just use the name of the package if you 
+would like the version most recently published.
+
 ##### Clone the repository and install it
+
 This repository has a button near the top where you can click for the link 
 to clone or download. Choose the https version unless you have set up an ssh
 token for Github. 
