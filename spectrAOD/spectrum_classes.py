@@ -250,7 +250,10 @@ class BaseSpectrum:
     def b(self):
         return self._skycoords.galactic.b.value
 
-    def get_ions(self, ion, file=DEFAULTS["all_ions"]):
+    def get_ions(self, ion, file=os.path.abspath(os.path.join(os.path.dirname(
+                __file__), 'mini_ions.csv'))):
+        if SETTINGS["defaults"]["all_ions"]:
+            file = SETTINGS["defaults"]["all_ions"]
         # this method retrieves the ion of interest's wavelength from the
         # ions file and creates a dictionary. Accounts
         # for doublets as well.

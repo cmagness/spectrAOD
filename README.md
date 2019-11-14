@@ -16,22 +16,28 @@ SpectrAOD
 Installation
 ------------
 
-This package is registered on PyPI and available via `pip`. We also offer 
-instructions on how to install from cloning the repository for the latest 
-version, between published releases. You will need a working, and preferably current 
-version of Anaconda.
+This package is registered on PyPI and available via `pip`. `pip` 
+installations will provide the latest version released to PyPI, and is 
+sufficient for installing the package. However, in case you would like the 
+latest version, between published releases, we also offer 
+instructions on how to install by cloning the repository. You will need a 
+working, and preferably current version of Anaconda.
 
 ##### Make a new environment
 ```
 conda create --name <environment_name> python=3.5 <other packages>
 ```
+`<other packages>` simply denotes any other packages you may wish to install
+ in this environment, such as `stsci` or `notebook`. All required packages 
+ for `spectrAOD` will be installed as a dependency automatically.
+ 
 Activate the new environment with:
 ```
 conda activate <environment_name>
 ```
 We recommend a short and simple name for the environment such as `spectraod`.
 
-##### Install with `pip`
+##### Install with `pip` (Latest published release, recommended)
 
 From the command line, in your new environment:
 ```
@@ -39,9 +45,11 @@ pip install spectrAOD==0.0.1
 ```
 
 You can drop the version number and just use the name of the package if you 
-would like the version most recently published.
+would like the version most recently published. `pip` will also give you 
+instructions on how to upgrade your version if there is a newer published 
+one available.
 
-##### Clone the repository and install it
+##### Clone the repository and install it (Latest version, recommended for developers only)
 
 This repository has a button near the top where you can click for the link 
 to clone or download. Choose the https version unless you have set up an ssh
@@ -62,8 +70,38 @@ Using `spectrAOD`
 
 In this repository you will see a file called `sample_settings.yaml`. You 
 will need a settings file to use this package that is of the same format. 
-Copy the settings file and rename it as you please. For `spectrAOD` to find 
-this file, you have two options:
+Copy the settings file and rename it as you please, but retain the `.yaml` 
+extension. If you've installed via `pip`, you will not be easily able to find this file. Create a `.yaml` file 
+and make sure it has the following information in it:
+
+```
+inputs:
+  # string: path to data
+  datadir:
+  # string: path to output directory
+  outdir:
+  # string: path to target list
+  targets:
+
+parameters:
+  # string: instrument
+  instrument:
+  # string: filetype
+  filetype:
+  # int: minimum number for velocity window in km/s
+  vel_min:
+  # int: maximum number for velocity window in km/s
+  vel_max:
+  # string: grating
+  grating:
+
+defaults:
+  continuum_left: [-450, -300]
+  continuum_right: [300, 450]
+  all_ions: "./mini_ions.csv"
+```
+
+For `spectrAOD` to find this file, you have two options:
 
 ###### Set an environment variable (Recommended)
 
@@ -88,22 +126,25 @@ If you don't want to mess with setting an environment variable, that is just
  package from and `spectrAOD` will look for a `.yaml` file if no environment
   variable is set. Just be warned that it will look for _any_ `.yaml` file.
    
-##### Running the package 
+###### Populating the settings
 
 Once you've told `spectrAOD` where to find your settings file, be sure to 
 actually populate it. Each parameter in the sample file has a comment with 
-information about what should go into that file. Remove that comment and 
-replace it with the default entries you want to use--don't worry, you can 
-change the value in each run from the command line.
+information about what should go into that file. These settings provide 
+a default for `spectrAOD` to use-don't worry, you can change the value in each 
+run from the command line.
 
 ###### Setting a Target List
 
 In the settings file you will notice one of the parameters asks for the path
- to your target list file. To perform the LSR correction `spectrAOD` needs a
-  target list that has the RA and DEC. The target name needs to match the 
-  name that is used in the file header if you are processing fits files. You
-   can see the format for this file (it must also be a csv at this time) in 
-   sample_targets.csv. Feel free to use that file to build your target list.
+to your target list file. Explicitly, this needs to be a **path to a target 
+list** and **NOT** a list of targets. To perform the LSR correction `spectrAOD` 
+needs a target list that has the RA and DEC. The target name needs to match
+the name that is used in the file header if you are processing fits files. You
+can see the format for this file (it must also be a csv at this time) in 
+sample_targets.csv. Feel free to use that file to build your target list.
+
+#### Running the package 
 
 ###### Command line arguments
 

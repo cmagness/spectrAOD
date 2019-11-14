@@ -49,11 +49,11 @@ def parse():
     parser = argparse.ArgumentParser(description="spectrAOD")
 
     # for debug only
-    parser.add_argument("--ion", default="SiIII", type=str,
-                        help="absorption line feature of interest")
-
-    # parser.add_argument("ion", type=str,
+    # parser.add_argument("--ion", default="SiIII", type=str,
     #                     help="absorption line feature of interest")
+
+    parser.add_argument("ion", type=str,
+                        help="absorption line feature of interest")
     parser.add_argument("--instrument", default=PARAMETERS["instrument"],
                         type=str, help="observational instrument data is taken"
                                        "on")
