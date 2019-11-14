@@ -16,10 +16,12 @@ else:
                 SETTINGS = yaml.safe_load(yamlfile)
                 # default SETTINGS file has empty values. if any are not
                 # filled in, exit
-                if not all(SETTINGS.values()):
-                    sys.exit("All fields in the configuration file must be "
-                             "assigned. Please refer to documentation on how "
-                             "to configure this package. Exiting...")
+                if not all(SETTINGS["inputs"].values()) and not all(
+                        SETTINGS["parameters"].values()):
+                    sys.exit("All input and parameter fields in the "
+                             "configuration file must be assigned. Please "
+                             "refer to documentation on how to configure this "
+                             "package. Exiting...")
                 break
 
 if not SETTINGS:

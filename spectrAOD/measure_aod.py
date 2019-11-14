@@ -49,16 +49,17 @@ def parse():
     parser = argparse.ArgumentParser(description="spectrAOD")
 
     # for debug only
-    parser.add_argument("--ion", default="SiIII", type=str,
-                        help="absorption line feature of interest")
-
-    # parser.add_argument("ion", type=str,
+    # parser.add_argument("--ion", default="SiIII", type=str,
     #                     help="absorption line feature of interest")
+
+    parser.add_argument("ion", type=str,
+                        help="absorption line feature of interest")
     parser.add_argument("--instrument", default=PARAMETERS["instrument"],
                         type=str, help="observational instrument data is taken"
                                        "on")
     parser.add_argument("--filetype", default=PARAMETERS["filetype"], type=str,
-                        help="filetype of data")
+                        help="filetype of data, takes X1DSUM (for x1ds or "
+                             "x1dsums), BART, and BART-N")
     parser.add_argument("--vel_min", default=PARAMETERS["vel_min"], type=int,
                         help="velocity minimum in window of interest around "
                              "ion, in km/s")
