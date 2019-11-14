@@ -41,7 +41,7 @@ We recommend a short and simple name for the environment such as `spectraod`.
 
 From the command line, in your new environment:
 ```
-pip install spectrAOD==0.0.1
+pip install spectrAOD==0.0.2
 ```
 
 You can drop the version number and just use the name of the package if you 
@@ -98,8 +98,11 @@ parameters:
 defaults:
   continuum_left: [-450, -300]
   continuum_right: [300, 450]
-  all_ions: "./mini_ions.csv"
+  all_ions: 
 ```
+You should leave the `all_ions` field blank to use the list of "mini_ions
+.csv" included with the package, unless you wish to provide the path to your
+ own list.
 
 For `spectrAOD` to find this file, you have two options:
 
