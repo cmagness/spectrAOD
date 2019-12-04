@@ -103,8 +103,6 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
     else:
         print("This Instrument is not yet supported at this time.")
 
-    # this needs to be addressed with proper error handling so that it is not
-    # referenced before assignment
     if not spectrum:
         sys.exit("Spectrum object not built. Unable to proceed. Exiting...")
 
