@@ -81,8 +81,9 @@ def parse():
     # range of the grating
 
     args = parser.parse_args()
-    spectrum = build_spectrum(DATADIR, args.instrument, args.filetype,
-                              args.grating)
+    spectrum = build_spectrum(DATADIR, args.instrument.upper(),
+                              args.filetype.upper(),
+                              args.grating.upper())
 
     return args, spectrum
 

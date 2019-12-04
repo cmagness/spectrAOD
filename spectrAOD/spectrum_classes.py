@@ -251,8 +251,8 @@ class BaseSpectrum:
         return self._skycoords.galactic.b.value
 
     def get_ions(self, ion, file=os.path.abspath(os.path.join(os.path.dirname(
-                __file__), 'mini_ions.csv'))):
-        if SETTINGS["defaults"]["all_ions"]:
+                __file__), "mini_ions.csv"))):
+        if not SETTINGS["defaults"]["all_ions"] == "mini_ions.csv":
             file = SETTINGS["defaults"]["all_ions"]
         # this method retrieves the ion of interest's wavelength from the
         # ions file and creates a dictionary. Accounts
@@ -280,15 +280,15 @@ class BaseSpectrum:
         # ion of interest and stores it
         vels = []
         for idx, wv in enumerate(self.ions["wv"]):
-            if wv >= min(self.wave) and wv <= max(self.wave):
+            if min(self.wave) <= wv <= max(self.wave):
                 z_array = (self.wave - wv) / wv
                 vel_array = C * z_array
                 vels.append(vel_array)
             else:
                 print("The ion ({}, {}) you are attempting to measure is "
                       "outside of the wavelength range of this spectrum ({}, "
-                      "{}).".format(self.ions["ion"][idx], wv, min(self.wave),
-                                   max(self.wave)))
+                      "{}).".format(self.ions["ion"][idx], wv,
+                                    min(self.wave), max(self.wave)))
         if not vels:
             print("There are no valid ions to measure. Exiting now.")
             raise SystemExit
@@ -303,7 +303,7 @@ class BaseSpectrum:
         df_targets = pd.read_csv(target_list, index_col=0)
         # need to add some error handling for if target name is not found in
         # list
-        mask = df_targets["Target"] == self.target
+        mask = df_targets["Target"].str.upper() == self.target.upper()
         self.ra = (df_targets.loc[mask]["RA"]).values
         self.dec = (df_targets.loc[mask]["DEC"]).values
         self._skycoords = SkyCoord(ra=self.ra * u.degree,

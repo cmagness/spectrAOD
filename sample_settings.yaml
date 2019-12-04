@@ -22,4 +22,5 @@ parameters:
 defaults:
   continuum_left: [-450, -300]
   continuum_right: [300, 450]
-  all_ions:
+  # string: path to ions file if not using default ions list
+  all_ions: "mini_ions.csv"
