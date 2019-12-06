@@ -23,6 +23,9 @@ latest version, between published releases, we also offer
 instructions on how to install by cloning the repository. You will need a 
 working, and preferably current version of Anaconda.
 
+> N.B.: If you are having any issues with installation, please consult the 
+[Common Issues](#common-issues) section.
+
 ##### Make a new environment
 ```
 conda create --name <environment_name> python=3.5 <other packages>
@@ -98,13 +101,24 @@ parameters:
 defaults:
   continuum_left: [-450, -300]
   continuum_right: [300, 450]
-  all_ions: 
+  # string: path to ions file
+  all_ions: "mini_ions.csv"
 ```
-You should leave the `all_ions` field blank to use the list of "mini_ions
+You should leave the `all_ions` field as is to use the list of "mini_ions
 .csv" included with the package, unless you wish to provide the path to your
- own list.
+ own list. If you choose to use your own ions list, you may either copy the 
+ mini list from the repository and add to it in the same format, or you may 
+ create an entirely new ions file with four columns, a header column, and 
+ the values space separated as follows:
+ 
+ ```
+ion wavelength f(oscillating strength) damping
+<STR:ION> <FLOAT:WAVELENGTH> <FLOAT:f> <FLOAT:damping>
+```
+> N.B.: the column names don't particularly matter as long as you have a 
+header column.
 
-For `spectrAOD` to find this file, you have two options:
+For `spectrAOD` to find the `settings.yaml` file, you have two options:
 
 ###### Set an environment variable (Recommended)
 
@@ -182,6 +196,23 @@ settings file by running:
 ```
 measure NV --vel_max 150
 ```
+
+#### Common Issues
+
+The following are issues encountered by people during the use of this 
+package. These are usually due to machine level installation problems but 
+they are being documented here in case someone else runs into a similar issue.
+
+* *Problem*: If you encounter an issue, error message, or traceback 
+referencing or relating to `setuptools`, you may have a corrupt version of the 
+package. 
+*Solution*: You may need to uninstall your version before installing 
+`spectrAOD`. You can do this with `pip uninstall setuptools` and then you 
+should be able to proceed with `spectrAOD` installation as usual. `spectrAOD` 
+will install a new version of `setuptools` for you.
+
+Should you encounter any other issues with the use of this package, please 
+open a new issue on the repository [here](https://github.com/cmagness/spectrAOD/issues).
 
 <!---
 
