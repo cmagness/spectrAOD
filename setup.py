@@ -29,8 +29,10 @@ setup(
         'numpy',
         'astropy',
         'pandas',
-        'argparse'
+        'argparse',
+        'pyyaml'
         ],
+    package_data={'spectrAOD': ['mini_ions.csv']},
     entry_points={'console_scripts': ['measure=spectrAOD.measure_aod:main']}
     # dependency_links=[],
     )
