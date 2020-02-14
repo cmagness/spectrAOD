@@ -1,0 +1,17 @@
+INFO[measure_aod.parse.106]:Initialized Arguments: 
+ Ion: NiII 
+Instrument: COS 
+Filetype: BART 
+Velocity Window: [-150, 150]Grating: G130M
+WARNING[measure_aod.parse.107]:If these are *not* the parameters you intended to use, please perform a new measurement. Future versions of this package will support mid process adjustments of these parameters.
+INFO[measure_aod.parse.114]:Spectrum object successfully built.
+INFO[measure_aod.lsr_correct.136]:Spectrum LSR corrected.
+INFO[measure_aod.continuum_fit.162]:Continuum fit calculated.
+INFO[spectrum_classes.set_measurements.448]:The following values have been calculated: 
+AOD: [{'error': 2.0696760739621625, 'aod': 13.103137476194133}] 
+ACD: [{'linear_error': 7401581470824.265, 'log_acd': 13.670797442345638, 'linear_acd': 46859477564427.09, 'log_error': 0.06369082346544275}] 
+EW: [{'error': 0.009339046634968795, 'ew': 0.05206532769984261}] 
+SIGMA: [5.575015280991429] 
+DETECTION: ['D']
+INFO[spectrum_classes.generate_table.501]:Measurements have been saved to /user/cmagness/fermi/data/out/PHL1811_NiII_measurements.csv.
+INFO[measure_aod.main.53]:spectrAOD complete.

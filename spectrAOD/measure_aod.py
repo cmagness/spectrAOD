@@ -8,8 +8,9 @@ depth of other spectra as well."""
 __author__ = "Camellia Magness"
 __email__ = "cmagness@stsci.edu"
 
-import argparse
 import sys
+import argparse
+import logging
 
 from . import SETTINGS
 from .format_data import build_spectrum
@@ -20,6 +21,18 @@ DATADIR = INPUTS["datadir"]
 TARGETS = INPUTS["targets"]
 PARAMETERS = SETTINGS["parameters"]
 DEFAULTS = SETTINGS["defaults"]
+
+# set up log file. will overwrite with each new run
+# log file has DEBUG level + written to it, package, module, function
+# console has only INFO level + written, basic format
+logging.basicConfig(filename="logfile.log",
+                    format="%(levelname)-4s[%(module)s.%(funcName)s.%("
+                           "lineno)d]:%(message)s", filemode="w",
+                    level=logging.DEBUG)
+LOGGER = logging.getLogger(__name__)
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+LOGGER.addHandler(console)
 
 
 # --------------------------------------------------------------------------- #
@@ -37,6 +50,7 @@ def main():
     spectrum = measure(args, spectrum)
     # generate table
     spectrum.generate_table(args.vel_min, args.vel_max)
+    LOGGER.info("spectrAOD complete.")
     return 0
 
 
@@ -49,11 +63,12 @@ def parse():
     parser = argparse.ArgumentParser(description="spectrAOD")
 
     # for debug only
-    # parser.add_argument("--ion", default="SiIII", type=str,
+    # parser.add_argument("--ion", default="SiIV", type=str,
     #                     help="absorption line feature of interest")
 
     parser.add_argument("ion", type=str,
                         help="absorption line feature of interest")
+
     parser.add_argument("--instrument", default=PARAMETERS["instrument"],
                         type=str, help="observational instrument data is taken"
                                        "on")
@@ -81,10 +96,22 @@ def parse():
     # range of the grating
 
     args = parser.parse_args()
+    LOGGER.info("Initialized Arguments: \n "
+                "Ion: {} \n"
+                "Instrument: {} \n"
+                "Filetype: {} \n"
+                "Velocity Window: [{}, {}] \n"
+                "Grating: {}".format(args.ion, args.instrument.upper(),
+                                     args.filetype.upper(), args.vel_min,
+                                     args.vel_max, args.grating.upper()))
+    LOGGER.warning("If these are *not* the parameters you intended to use, "
+                   "please perform a new measurement. Future versions of "
+                   "this package will support mid process adjustments of "
+                   "these parameters.")
     spectrum = build_spectrum(DATADIR, args.instrument.upper(),
-                              args.filetype.upper(),
-                              args.grating.upper())
+                              args.filetype.upper(), args.grating.upper())
 
+    LOGGER.info("Spectrum object successfully built.")
     return args, spectrum
 
 
@@ -106,6 +133,7 @@ def lsr_correct(args, spectrum):
     # object wavelength array (in velocity space)
     spectrum.lsr_correct_velocity()
 
+    LOGGER.info("Spectrum LSR corrected.")
     return spectrum
 
 
@@ -122,8 +150,8 @@ def continuum_fit(spectrum, left=DEFAULTS["continuum_left"],
     # continuum window boundaries
     left_indices = spectrum.find_indices(left)
     right_indices = spectrum.find_indices(right)
-    indices = [left + right for left, right in zip(left_indices,
-                                                   right_indices)]
+    indices = [left + right for left, right in
+               zip(left_indices, right_indices)]
     # calculating means, signal to noise, pixel size, and S/N per resel
     continuum, signalnoise, pixels = spectrum.calculate_continuum(indices)
 
@@ -131,6 +159,7 @@ def continuum_fit(spectrum, left=DEFAULTS["continuum_left"],
     # error attributes
     spectrum, linear_fits = spectrum.calculate_fits(continuum)
 
+    LOGGER.info("Continuum fit calculated.")
     return spectrum
 
 

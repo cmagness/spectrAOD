@@ -11,6 +11,7 @@ __email__ = "cmagness@stsci.edu"
 import os
 import sys
 import glob
+import logging
 
 import numpy as np
 from astropy import constants
@@ -23,6 +24,7 @@ from .spectrum_classes import X1DSpectrum, ASCIISpectrum
 INPUTS = SETTINGS["inputs"]
 DATADIR = INPUTS["datadir"]
 PARAMETERS = SETTINGS["parameters"]
+LOGGER = logging.getLogger(__name__)
 
 C = constants.c.to('km/s').value  # km/s
 
@@ -99,12 +101,15 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                 error = np.array(data.columns["error"])
                 spectrum = ASCIISpectrum(target, wave, flux, error)
         else:
-            print("Other file types are not yet supported at this time.")
+            LOGGER.warning("Other file types are not yet supported at this "
+                           "time.")
     else:
-        print("This Instrument is not yet supported at this time.")
+        LOGGER.warning("This Instrument is not yet supported at this time.")
 
     if not spectrum:
-        sys.exit("Spectrum object not built. Unable to proceed. Exiting...")
+        LOGGER.error("Spectrum object not built. Unable to proceed. "
+                     "Exiting...")
+        sys.exit()
 
     return spectrum
 

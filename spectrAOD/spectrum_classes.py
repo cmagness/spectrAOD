@@ -7,6 +7,7 @@ __author__ = "Camellia Magness"
 __email__ = "cmagness@stsci.edu"
 
 import os
+import logging
 
 import astropy.units as u
 import numpy as np
@@ -20,6 +21,7 @@ from . import SETTINGS
 INPUTS = SETTINGS["inputs"]
 OUTDIR = INPUTS["outdir"]
 DEFAULTS = SETTINGS["defaults"]
+LOGGER = logging.getLogger(__name__)
 
 C = constants.c.to('km/s').value  # km/s
 
@@ -436,6 +438,14 @@ class BaseSpectrum:
         self.ew_val = helper.ew_val
         self.sig = helper.sig
         self.detection = helper.detection
+        LOGGER.info("The following values have been calculated: \n"
+                    "AOD: {} \n"
+                    "ACD: {} \n"
+                    "EW: {} \n"
+                    "SIGMA: {} \n"
+                    "DETECTION: {}".format(self.aod_val, self.acd_val,
+                                           self.ew_val, self.sig,
+                                           self.detection))
 
     def generate_table(self, vel_min, vel_max):
         # this method should generate the table with all the measurements
@@ -488,6 +498,7 @@ class BaseSpectrum:
             os.remove(outfile)
             # it's getting corrupted if i don't do this?
         df.to_csv(os.path.join(outfile))
+        LOGGER.info("Measurements have been saved to {}.".format(outfile))
 
     def to_fits(self):
         # this method should generate a fits file
