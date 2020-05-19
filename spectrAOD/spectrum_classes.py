@@ -233,6 +233,7 @@ class BaseSpectrum:
         self.ra = None
         self.dec = None
         self._skycoords = None
+        self._redshift = DEFAULTS["redshift"]
 
         # things that will be retrieved from helper class
         self.aod = None
@@ -290,7 +291,8 @@ class BaseSpectrum:
         vels = []
         for idx, wv in enumerate(self.ions["wv"]):
             if min(self.wave) <= wv <= max(self.wave):
-                z_array = (self.wave - wv) / wv
+                rest_wv = self.wave / (1.0 + self._redshift)  # adjust for z
+                z_array = (rest_wv - wv) / wv
                 vel_array = C * z_array
                 vels.append(vel_array)
             else:
