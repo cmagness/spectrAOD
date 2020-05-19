@@ -86,6 +86,9 @@ def parse():
                              "ion, in km/s")
     parser.add_argument("--grating", default=PARAMETERS["grating"], type=str,
                         help="grating of observation mode")
+    parser.add_argument("--redshift", default=PARAMETERS["redshift"],
+                        type=float, help="redshift of wavelength "
+                                         "region/target")
     # need to do something about the grating bc not every dataset will have
     # a grating in the future
 
@@ -104,15 +107,18 @@ def parse():
                 "Instrument: {} \n"
                 "Filetype: {} \n"
                 "Velocity Window: [{}, {}] \n"
-                "Grating: {}".format(args.ion, args.instrument.upper(),
-                                     args.filetype.upper(), args.vel_min,
-                                     args.vel_max, args.grating.upper()))
+                "Grating: {} \n"
+                "Redshift: {}".format(args.ion, args.instrument.upper(),
+                                      args.filetype.upper(), args.vel_min,
+                                      args.vel_max, args.grating.upper(),
+                                      args.redshift))
     LOGGER.warning("If these are *not* the parameters you intended to use, "
                    "please perform a new measurement. Future versions of "
                    "this package will support mid process adjustments of "
                    "these parameters.")
     spectrum = build_spectrum(DATADIR, args.instrument.upper(),
-                              args.filetype.upper(), args.grating.upper())
+                              args.filetype.upper(), args.grating.upper(),
+                              args.redshift)
 
     return args, spectrum
 

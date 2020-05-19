@@ -45,7 +45,8 @@ N = 3.768e14  # proportionality constant -> (m_e * c)/(pi * e**2)
 
 
 def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
-                   file=PARAMETERS["filetype"], grating=PARAMETERS["grating"]):
+                   file=PARAMETERS["filetype"], grating=PARAMETERS["grating"],
+                   redshift=PARAMETERS["redshift"]):
     # this function should build and return the appropriate Spectrum object
     # for measure_aod.py
     # default inputs for instrument and file type are COS and X1D at the
@@ -72,7 +73,7 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                         flux = np.array(target_data["FLUX"].ravel())
                         error = np.array(target_data["ERROR"].ravel())
                         spectrum = X1DSpectrum(x1dsum, target, wave, flux,
-                                               error)
+                                               error, redshift)
         elif file == "BART":
             search_string = "_spec-{}".format(grating)
             asciis = glob.glob(datadir + "*" + search_string)

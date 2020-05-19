@@ -216,7 +216,7 @@ class BaseSpectrum:
     # NEED TO ADD SOME ERROR HANDLING IF METHODS ARE CALLED BEFORE
     # ATTRIBUTES USED ARE DEFINED
 
-    def __init__(self, target, wave, flux, error):
+    def __init__(self, target, wave, flux, error, redshift=0.0):
         self.target = target
         self.wave = wave
         self.flux = flux
@@ -233,7 +233,7 @@ class BaseSpectrum:
         self.ra = None
         self.dec = None
         self._skycoords = None
-        self._redshift = DEFAULTS["redshift"]
+        self._redshift = redshift
 
         # things that will be retrieved from helper class
         self.aod = None
@@ -291,8 +291,9 @@ class BaseSpectrum:
         vels = []
         for idx, wv in enumerate(self.ions["wv"]):
             if min(self.wave) <= wv <= max(self.wave):
-                rest_wv = self.wave / (1.0 + self._redshift)  # adjust for z
-                z_array = (rest_wv - wv) / wv
+                # update wavelength array based on redshift
+                self.wave = self.wave / (1.0 + self._redshift)
+                z_array = (self.wave - wv) / wv
                 vel_array = C * z_array
                 vels.append(vel_array)
             else:
