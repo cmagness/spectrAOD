@@ -1,17 +1,18 @@
-INFO[measure_aod.parse.106]:Initialized Arguments: 
- Ion: NiII 
+INFO[measure_aod.parse.109]:Initialized Arguments: 
+Ion: NV 
 Instrument: COS 
-Filetype: BART 
-Velocity Window: [-150, 150]Grating: G130M
-WARNING[measure_aod.parse.107]:If these are *not* the parameters you intended to use, please perform a new measurement. Future versions of this package will support mid process adjustments of these parameters.
-INFO[measure_aod.parse.114]:Spectrum object successfully built.
-INFO[measure_aod.lsr_correct.136]:Spectrum LSR corrected.
-INFO[measure_aod.continuum_fit.162]:Continuum fit calculated.
-INFO[spectrum_classes.set_measurements.448]:The following values have been calculated: 
-AOD: [{'error': 2.0696760739621625, 'aod': 13.103137476194133}] 
-ACD: [{'linear_error': 7401581470824.265, 'log_acd': 13.670797442345638, 'linear_acd': 46859477564427.09, 'log_error': 0.06369082346544275}] 
-EW: [{'error': 0.009339046634968795, 'ew': 0.05206532769984261}] 
-SIGMA: [5.575015280991429] 
-DETECTION: ['D']
-INFO[spectrum_classes.generate_table.501]:Measurements have been saved to /user/cmagness/fermi/data/out/PHL1811_NiII_measurements.csv.
-INFO[measure_aod.main.53]:spectrAOD complete.
+Filetype: X1DSUM 
+Velocity Window: [-150, 150] 
+Grating: G130M
+WARNING[measure_aod.parse.110]:If these are *not* the parameters you intended to use, please perform a new measurement. Future versions of this package will support mid process adjustments of these parameters.
+INFO[measure_aod.main.44]:Spectrum object successfully built.
+INFO[measure_aod.main.47]:Spectrum LSR corrected.
+INFO[measure_aod.main.50]:Continuum fit calculated.
+INFO[spectrum_classes.set_measurements.449]:The following values have been calculated: 
+AOD: [{'aod': 36.24980380295531, 'error': 4.823011176171736}, {'aod': 71.70888111870764, 'error': 4.317462101066714}] 
+ACD: [{'linear_acd': 70677860979406.25, 'linear_error': 9403640231117.547, 'log_acd': 13.849283397386825, 'log_error': 0.054248808459757214}, {'linear_acd': 282351742830310.4, 'linear_error': 16999888016966.596, 'log_acd': 14.450790472785668, 'log_error': 0.02539115570920991}] 
+EW: [{'ew': 0.11181632041075559, 'error': 0.01982842002819276}, {'ew': 0.237015969756857, 'error': 0.017627758724802666}] 
+SIGMA: [5.639194663607647, 13.445610043627951] 
+DETECTION: ['D', 'D']
+INFO[spectrum_classes.generate_table.502]:Measurements have been saved to /user/cmagness/fermi/data/out/UVQSJ19192_NV_NV_measurements.csv.
+INFO[measure_aod.main.56]:spectrAOD complete.

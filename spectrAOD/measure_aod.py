@@ -41,10 +41,13 @@ LOGGER.addHandler(console)
 def main():
     # argparse
     args, spectrum = parse()
+    LOGGER.info("Spectrum object successfully built.")
     # LSR correction
     spectrum = lsr_correct(args, spectrum)
+    LOGGER.info("Spectrum LSR corrected.")
     # continuum fit
     spectrum = continuum_fit(spectrum)
+    LOGGER.info("Continuum fit calculated.")
     # measure aod/acd/ew
     # set measurements back in spectrum object from helper object
     spectrum = measure(args, spectrum)
@@ -96,7 +99,7 @@ def parse():
     # range of the grating
 
     args = parser.parse_args()
-    LOGGER.info("Initialized Arguments: \n "
+    LOGGER.info("Initialized Arguments: \n"
                 "Ion: {} \n"
                 "Instrument: {} \n"
                 "Filetype: {} \n"
@@ -111,7 +114,6 @@ def parse():
     spectrum = build_spectrum(DATADIR, args.instrument.upper(),
                               args.filetype.upper(), args.grating.upper())
 
-    LOGGER.info("Spectrum object successfully built.")
     return args, spectrum
 
 
@@ -133,7 +135,6 @@ def lsr_correct(args, spectrum):
     # object wavelength array (in velocity space)
     spectrum.lsr_correct_velocity()
 
-    LOGGER.info("Spectrum LSR corrected.")
     return spectrum
 
 
@@ -159,7 +160,6 @@ def continuum_fit(spectrum, left=DEFAULTS["continuum_left"],
     # error attributes
     spectrum, linear_fits = spectrum.calculate_fits(continuum)
 
-    LOGGER.info("Continuum fit calculated.")
     return spectrum
 
 

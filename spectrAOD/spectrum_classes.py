@@ -22,12 +22,13 @@ INPUTS = SETTINGS["inputs"]
 OUTDIR = INPUTS["outdir"]
 DEFAULTS = SETTINGS["defaults"]
 LOGGER = logging.getLogger(__name__)
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+LOGGER.addHandler(console)
 
 C = constants.c.to('km/s').value  # km/s
 
 N = 3.768e14  # proportionality constant -> (m_e * c)/(pi * e**2)
-
-# add logger instead of print statements
 
 # notes on class functionality:
 # add functionality to build fits files as a method of class objects
