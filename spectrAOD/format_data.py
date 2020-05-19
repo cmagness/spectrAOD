@@ -25,6 +25,9 @@ INPUTS = SETTINGS["inputs"]
 DATADIR = INPUTS["datadir"]
 PARAMETERS = SETTINGS["parameters"]
 LOGGER = logging.getLogger(__name__)
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+LOGGER.addHandler(console)
 
 C = constants.c.to('km/s').value  # km/s
 
@@ -68,7 +71,8 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                         # best way to do this, ravelling here?
                         flux = np.array(target_data["FLUX"].ravel())
                         error = np.array(target_data["ERROR"].ravel())
-                        spectrum = X1DSpectrum(target, wave, flux, error)
+                        spectrum = X1DSpectrum(x1dsum, target, wave, flux,
+                                               error)
         elif file == "BART":
             search_string = "_spec-{}".format(grating)
             asciis = glob.glob(datadir + "*" + search_string)

@@ -247,11 +247,17 @@ class BaseSpectrum:
 
     @property
     def l(self):
-        return self._skycoords.galactic.l.value
+        if self._skycoords:
+            return self._skycoords.galactic.l.value
+        else:
+            return None
 
     @property
     def b(self):
-        return self._skycoords.galactic.b.value
+        if self._skycoords:
+            return self._skycoords.galactic.b.value
+        else:
+            return None
 
     def get_ions(self, ion, file=os.path.abspath(os.path.join(os.path.dirname(
                 __file__), "mini_ions.csv"))):
@@ -307,8 +313,8 @@ class BaseSpectrum:
         # need to add some error handling for if target name is not found in
         # list
         mask = df_targets["Target"].str.upper() == self.target.upper()
-        self.ra = (df_targets.loc[mask]["RA"]).values
-        self.dec = (df_targets.loc[mask]["DEC"]).values
+        self.ra = (df_targets.loc[mask]["RA"]).values[0]
+        self.dec = (df_targets.loc[mask]["DEC"]).values[0]
         self._skycoords = SkyCoord(ra=self.ra * u.degree,
                                    dec=self.dec * u.degree)
 
@@ -321,7 +327,7 @@ class BaseSpectrum:
                     12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
         for idx in np.arange(len(self.velocity)):
-            self.velocity[idx] = self.velocity[idx] + vel_corr[0]
+            self.velocity[idx] = self.velocity[idx] + vel_corr
 
     def find_indices(self, window):
         # this method finds the indices for a velocity window for each
@@ -458,8 +464,8 @@ class BaseSpectrum:
         for idx in np.arange(len(self.velocity)):
             df = df.append(pd.Series({
                 "TARGET": self.target,
-                "RA": "{:.2f}".format(self.ra[0]),
-                "DEC": "{:.2f}".format(self.dec[0]),
+                "RA": "{:.2f}".format(self.ra),
+                "DEC": "{:.2f}".format(self.dec),
                 "ION": self.ions["ion"][idx],
                 "WAVELENGTH": "{:4.2f}".format(self.ions["wv"][idx]),
                 "VEL MIN": vel_min,
@@ -514,8 +520,18 @@ class X1DSpectrum(BaseSpectrum):
     files and will have methods for holding
     other x1d specific information."""
 
-    def __init__(self, *args):
+    def __init__(self, filepath, *args):
         super().__init__(*args)
+        self.filepath = filepath
+
+    def get_coords(self, target_list):
+        # this method should get the RA & DEC from the file header
+        # instead of the coordinates list as the superclass does
+        header = fits.getheader(self.filepath)
+        self.ra = header["RA_TARG"]
+        self.dec = header["DEC_TARG"]
+        self._skycoords = SkyCoord(ra=self.ra * u.degree,
+                                   dec=self.dec * u.degree)
 
     def x1d_specs(self):
         # this method could hold other x1d specific stuff, like header

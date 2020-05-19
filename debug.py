@@ -20,7 +20,7 @@ ARGS = {
         }
 
 
-class Parameters():
+class Parameters:
     def __init__(self, ion, instrument, filetype, vel_min, vel_max, grating):
         self.ion = ion
         self.instrument = instrument
