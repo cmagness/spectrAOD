@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="spectrAOD",
-    version="0.0.2",
+    version="0.0.3",
     author="Camellia Magness",
     author_email="cmagness@stsci.edu",
     description="This package is for measuring the apparent optical depth of "
@@ -29,8 +29,10 @@ setup(
         'numpy',
         'astropy',
         'pandas',
-        'argparse'
+        'argparse',
+        'pyyaml'
         ],
+    package_data={'spectrAOD': ['mini_ions.csv']},
     entry_points={'console_scripts': ['measure=spectrAOD.measure_aod:main']}
     # dependency_links=[],
     )

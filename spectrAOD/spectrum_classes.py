@@ -7,6 +7,7 @@ __author__ = "Camellia Magness"
 __email__ = "cmagness@stsci.edu"
 
 import os
+import logging
 
 import astropy.units as u
 import numpy as np
@@ -20,12 +21,14 @@ from . import SETTINGS
 INPUTS = SETTINGS["inputs"]
 OUTDIR = INPUTS["outdir"]
 DEFAULTS = SETTINGS["defaults"]
+LOGGER = logging.getLogger(__name__)
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+LOGGER.addHandler(console)
 
 C = constants.c.to('km/s').value  # km/s
 
 N = 3.768e14  # proportionality constant -> (m_e * c)/(pi * e**2)
-
-# add logger instead of print statements
 
 # notes on class functionality:
 # add functionality to build fits files as a method of class objects
@@ -213,7 +216,7 @@ class BaseSpectrum:
     # NEED TO ADD SOME ERROR HANDLING IF METHODS ARE CALLED BEFORE
     # ATTRIBUTES USED ARE DEFINED
 
-    def __init__(self, target, wave, flux, error):
+    def __init__(self, target, wave, flux, error, redshift):
         self.target = target
         self.wave = wave
         self.flux = flux
@@ -230,6 +233,7 @@ class BaseSpectrum:
         self.ra = None
         self.dec = None
         self._skycoords = None
+        self._redshift = redshift
 
         # things that will be retrieved from helper class
         self.aod = None
@@ -244,11 +248,17 @@ class BaseSpectrum:
 
     @property
     def l(self):
-        return self._skycoords.galactic.l.value
+        if self._skycoords:
+            return self._skycoords.galactic.l.value
+        else:
+            return None
 
     @property
     def b(self):
-        return self._skycoords.galactic.b.value
+        if self._skycoords:
+            return self._skycoords.galactic.b.value
+        else:
+            return None
 
     def get_ions(self, ion, file=os.path.abspath(os.path.join(os.path.dirname(
                 __file__), "mini_ions.csv"))):
@@ -281,6 +291,8 @@ class BaseSpectrum:
         vels = []
         for idx, wv in enumerate(self.ions["wv"]):
             if min(self.wave) <= wv <= max(self.wave):
+                # update wavelength array based on redshift
+                self.wave = self.wave / (1.0 + self._redshift)
                 z_array = (self.wave - wv) / wv
                 vel_array = C * z_array
                 vels.append(vel_array)
@@ -304,8 +316,8 @@ class BaseSpectrum:
         # need to add some error handling for if target name is not found in
         # list
         mask = df_targets["Target"].str.upper() == self.target.upper()
-        self.ra = (df_targets.loc[mask]["RA"]).values
-        self.dec = (df_targets.loc[mask]["DEC"]).values
+        self.ra = (df_targets.loc[mask]["RA"]).values[0]
+        self.dec = (df_targets.loc[mask]["DEC"]).values[0]
         self._skycoords = SkyCoord(ra=self.ra * u.degree,
                                    dec=self.dec * u.degree)
 
@@ -318,7 +330,7 @@ class BaseSpectrum:
                     12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
         for idx in np.arange(len(self.velocity)):
-            self.velocity[idx] = self.velocity[idx] + vel_corr[0]
+            self.velocity[idx] = self.velocity[idx] + vel_corr
 
     def find_indices(self, window):
         # this method finds the indices for a velocity window for each
@@ -436,6 +448,14 @@ class BaseSpectrum:
         self.ew_val = helper.ew_val
         self.sig = helper.sig
         self.detection = helper.detection
+        LOGGER.info("The following values have been calculated: \n"
+                    "AOD: {} \n"
+                    "ACD: {} \n"
+                    "EW: {} \n"
+                    "SIGMA: {} \n"
+                    "DETECTION: {}".format(self.aod_val, self.acd_val,
+                                           self.ew_val, self.sig,
+                                           self.detection))
 
     def generate_table(self, vel_min, vel_max):
         # this method should generate the table with all the measurements
@@ -447,8 +467,8 @@ class BaseSpectrum:
         for idx in np.arange(len(self.velocity)):
             df = df.append(pd.Series({
                 "TARGET": self.target,
-                "RA": "{:.2f}".format(self.ra[0]),
-                "DEC": "{:.2f}".format(self.dec[0]),
+                "RA": "{:.2f}".format(self.ra),
+                "DEC": "{:.2f}".format(self.dec),
                 "ION": self.ions["ion"][idx],
                 "WAVELENGTH": "{:4.2f}".format(self.ions["wv"][idx]),
                 "VEL MIN": vel_min,
@@ -488,6 +508,7 @@ class BaseSpectrum:
             os.remove(outfile)
             # it's getting corrupted if i don't do this?
         df.to_csv(os.path.join(outfile))
+        LOGGER.info("Measurements have been saved to {}.".format(outfile))
 
     def to_fits(self):
         # this method should generate a fits file
@@ -502,8 +523,18 @@ class X1DSpectrum(BaseSpectrum):
     files and will have methods for holding
     other x1d specific information."""
 
-    def __init__(self, *args):
+    def __init__(self, filepath, *args):
         super().__init__(*args)
+        self.filepath = filepath
+
+    def get_coords(self, target_list):
+        # this method should get the RA & DEC from the file header
+        # instead of the coordinates list as the superclass does
+        header = fits.getheader(self.filepath)
+        self.ra = header["RA_TARG"]
+        self.dec = header["DEC_TARG"]
+        self._skycoords = SkyCoord(ra=self.ra * u.degree,
+                                   dec=self.dec * u.degree)
 
     def x1d_specs(self):
         # this method could hold other x1d specific stuff, like header

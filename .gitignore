@@ -26,5 +26,8 @@ var/
 # Configuration
 settings.yaml
 
-# Debugging
-debug.py
+# Package Data
+./spectrAOD/ions.csv
+
+# Misc
+*.log
