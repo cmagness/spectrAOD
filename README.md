@@ -44,7 +44,7 @@ We recommend a short and simple name for the environment such as `spectraod`.
 
 From the command line, in your new environment:
 ```
-pip install spectrAOD==0.0.2
+pip install spectrAOD==0.0.3
 ```
 
 You can drop the version number and just use the name of the package if you 
@@ -87,16 +87,18 @@ inputs:
   targets:
 
 parameters:
-  # string: instrument
+  # string: instrument [COS]
   instrument:
-  # string: filetype
+  # string: filetype [X1DSUM, BART]
   filetype:
   # int: minimum number for velocity window in km/s
   vel_min:
   # int: maximum number for velocity window in km/s
   vel_max:
-  # string: grating
+  # string: grating, must match header keyword
   grating:
+  # float: redshift of interest. default is set to 0
+  redshift:
 
 defaults:
   continuum_left: [-450, -300]
@@ -104,12 +106,12 @@ defaults:
   # string: path to ions file
   all_ions: "mini_ions.csv"
 ```
-You should leave the `all_ions` field as is to use the list of "mini_ions
-.csv" included with the package, unless you wish to provide the path to your
- own list. If you choose to use your own ions list, you may either copy the 
- mini list from the repository and add to it in the same format, or you may 
- create an entirely new ions file with four columns, a header column, and 
- the values space separated as follows:
+You should leave the `all_ions` field as is to use the list of "mini_ions.csv" 
+included with the package, unless you wish to provide the path to your own
+list. If you choose to use your own ions list, you may either copy the mini 
+list from the repository and add to it in the same format, or you may create 
+an entirely new ions file with four columns, a header column, and the values 
+space separated as follows:
  
  ```
 ion wavelength f(oscillating strength) damping
@@ -117,6 +119,19 @@ ion wavelength f(oscillating strength) damping
 ```
 > N.B.: the column names don't particularly matter as long as you have a 
 header column.
+
+###### Setting a Target List
+
+**If you are working with `X1DSUM` data you do not need a target list and
+can skip this section. The RA and DEC used to calculate the LSR correction
+will be retrieved from the file header.**
+
+In the settings file you will notice one of the parameters asks for the path
+to your target list file. Explicitly, this needs to be a **path to a target 
+list** and **NOT** a list of targets. To perform the LSR correction `spectrAOD` 
+needs a target list that has the RA and DEC. You can see the format for this
+file (it must also be a csv at this time) in sample_targets.csv. Feel free to 
+use that file to build your target list.
 
 For `spectrAOD` to find the `settings.yaml` file, you have two options:
 
@@ -150,16 +165,6 @@ actually populate it. Each parameter in the sample file has a comment with
 information about what should go into that file. These settings provide 
 a default for `spectrAOD` to use-don't worry, you can change the value in each 
 run from the command line.
-
-###### Setting a Target List
-
-In the settings file you will notice one of the parameters asks for the path
-to your target list file. Explicitly, this needs to be a **path to a target 
-list** and **NOT** a list of targets. To perform the LSR correction `spectrAOD` 
-needs a target list that has the RA and DEC. The target name needs to match
-the name that is used in the file header if you are processing fits files. You
-can see the format for this file (it must also be a csv at this time) in 
-sample_targets.csv. Feel free to use that file to build your target list.
 
 #### Running the package 
 
