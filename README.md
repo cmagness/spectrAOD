@@ -97,7 +97,7 @@ parameters:
   vel_max:
   # string: grating, must match header keyword
   grating:
-  # float: redshift of interest. default is set to 0
+  # float: redshift of interest. use 0.0 if not specified
   redshift:
 
 defaults:
@@ -124,7 +124,7 @@ header column.
 
 **If you are working with `X1DSUM` data you do not need a target list and
 can skip this section. The RA and DEC used to calculate the LSR correction
-will be retrieved from the file header.**
+will be retrieved from the file header. Just make sure to set `targets: ""`.**
 
 In the settings file you will notice one of the parameters asks for the path
 to your target list file. Explicitly, this needs to be a **path to a target 

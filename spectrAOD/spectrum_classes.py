@@ -216,7 +216,7 @@ class BaseSpectrum:
     # NEED TO ADD SOME ERROR HANDLING IF METHODS ARE CALLED BEFORE
     # ATTRIBUTES USED ARE DEFINED
 
-    def __init__(self, target, wave, flux, error, redshift=0.0):
+    def __init__(self, target, wave, flux, error, redshift):
         self.target = target
         self.wave = wave
         self.flux = flux
