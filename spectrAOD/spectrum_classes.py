@@ -222,6 +222,7 @@ class BaseSpectrum:
         self.flux = flux
         self.error = error
         self.ions = None
+        self.raw_velocity = None
         self.velocity = None
         self.norm_flux = None
         self.norm_error = None
@@ -304,7 +305,7 @@ class BaseSpectrum:
         if not vels:
             print("There are no valid ions to measure. Exiting now.")
             raise SystemExit
-        self.velocity = vels
+        self.raw_velocity = vels
         # eventually will need to keep track of ion associated with the
         # velocity array in a dictionary maybe?
         # for now it is fine because they are associated with the same ion
@@ -324,13 +325,16 @@ class BaseSpectrum:
     def lsr_correct_velocity(self):
         # this method should apply the lsr correction to the heliocentric
         # coordinates
+        self.velocity = self.raw_velocity
+        # this is a bad fix but temp bc can't set velocity[idx] to anything
+        # if there isn't a velocity set yet
         l_radians = self.l * np.pi / 180.0
         b_radians = self.b * np.pi / 180.0
         vel_corr = (9.0 * np.cos(l_radians) * np.cos(b_radians)) + (
                     12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
-        for idx in np.arange(len(self.velocity)):
-            self.velocity[idx] = self.velocity[idx] + vel_corr
+        for idx in np.arange(len(self.raw_velocity)):
+            self.velocity[idx] = self.raw_velocity[idx] + vel_corr
 
     def find_indices(self, window):
         # this method finds the indices for a velocity window for each
