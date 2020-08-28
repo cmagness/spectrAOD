@@ -75,6 +75,7 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                         spectrum = X1DSpectrum(x1dsum, target, wave, flux,
                                                error, redshift)
         elif file == "BART":
+            redshift = PARAMETERS["redshift"]
             search_string = "_spec-{}".format(grating)
             asciis = glob.glob(datadir + "*" + search_string)
             # multiple asciis??
@@ -89,8 +90,9 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                 wave = np.array(data.columns["wave"])
                 flux = np.array(data.columns["flux"])
                 error = np.array(data.columns["error"])
-                spectrum = ASCIISpectrum(target, wave, flux, error)
+                spectrum = ASCIISpectrum(target, wave, flux, error, redshift)
         elif file == "BART-N":
+            redshift = PARAMETERS["redshift"]
             search_string = "_spec-{}-N".format(grating)
             asciis = glob.glob(datadir + "*" + search_string)
             for ascii_file in asciis:
@@ -104,7 +106,20 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                 wave = np.array(data.columns["wave"])
                 flux = np.array(data.columns["flux"])
                 error = np.array(data.columns["error"])
-                spectrum = ASCIISpectrum(target, wave, flux, error)
+                spectrum = ASCIISpectrum(target, wave, flux, error, redshift)
+        elif file == "ASCII":
+            redshift = PARAMETERS["redshift"]
+            target = PARAMETERS["target"]
+            asciis = glob.glob(datadir + "*" + target + "*")
+            for ascii_file in asciis:
+                data = ascii.read(ascii_file, names=["wave", "flux", "error"])
+                if len(data.columns) > 3:
+                    raise IndexError("Too many columns")
+                    # choose a better error type?
+                wave = np.array(data.columns["wave"])
+                flux = np.array(data.columns["flux"])
+                error = np.array(data.columns["error"])
+                spectrum = ASCIISpectrum(target, wave, flux, error, redshift)
         else:
             LOGGER.warning("Other file types are not yet supported at this "
                            "time.")
