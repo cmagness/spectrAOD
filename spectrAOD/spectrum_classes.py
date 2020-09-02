@@ -231,8 +231,6 @@ class BaseSpectrum:
         self.sn_res = None
         self.delta = None
         self.doublet = False
-        self.ra = None
-        self.dec = None
         self._skycoords = None
         self._redshift = redshift
 
@@ -258,6 +256,20 @@ class BaseSpectrum:
     def b(self):
         if self._skycoords:
             return self._skycoords.galactic.b.value
+        else:
+            return None
+
+    @property
+    def ra(self):
+        if self._skycoords:
+            return self._skycoords.icrs.ra.value
+        else:
+            return None
+
+    @property
+    def dec(self):
+        if self._skycoords:
+            return self._skycoords.icrs.dec.value
         else:
             return None
 
@@ -317,10 +329,16 @@ class BaseSpectrum:
         # need to add some error handling for if target name is not found in
         # list
         mask = df_targets["Target"].str.upper() == self.target.upper()
-        self.ra = (df_targets.loc[mask]["RA"]).values[0]
-        self.dec = (df_targets.loc[mask]["DEC"]).values[0]
-        self._skycoords = SkyCoord(ra=self.ra * u.degree,
-                                   dec=self.dec * u.degree)
+        if not DEFAULTS["galactic"]:
+            ra = (df_targets.loc[mask]["RA"]).values[0]
+            dec = (df_targets.loc[mask]["DEC"]).values[0]
+            self._skycoords = SkyCoord(ra=ra * u.degree,
+                                       dec=dec * u.degree)
+        else:
+            galactic_l = (df_targets.loc[mask]["L"]).values[0]
+            galactic_b = (df_targets.loc[mask]["B"]).values[0]
+            self._skycoords = SkyCoord(galactic_l * u.degree, galactic_b *
+                                       u.degree, frame="galactic")
 
     def lsr_correct_velocity(self):
         # this method should apply the lsr correction to the heliocentric
@@ -473,6 +491,8 @@ class BaseSpectrum:
                 "TARGET": self.target,
                 "RA": "{:.2f}".format(self.ra),
                 "DEC": "{:.2f}".format(self.dec),
+                "L": "{:.2f}".format(self.l),
+                "B": "{:.2f}".format(self.b),
                 "ION": self.ions["ion"][idx],
                 "WAVELENGTH": "{:4.2f}".format(self.ions["wv"][idx]),
                 "VEL MIN": vel_min,
