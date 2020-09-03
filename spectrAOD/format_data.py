@@ -54,12 +54,16 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
     # moment, for testing
 
     spectrum = None
+    batch_mode = DEFAULTS["batch_table"]
 
     # this might (?) need handling for other inputs other than just COS as
     # well. at some point.
     if ins == "COS":
         if file == "X1DSUM":
-            x1dsums = glob.glob(datadir + "*x1dsum.fits")
+            if batch_mode:
+                x1dsums = [datadir]  # this will really be a path to one file
+            else:
+                x1dsums = glob.glob(datadir + "*x1dsum.fits")
             for x1dsum in x1dsums:
                 with fits.open(x1dsum) as f:
                     prhd = f["PRIMARY"].header
@@ -76,10 +80,11 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                         spectrum = X1DSpectrum(x1dsum, target, wave, flux,
                                                error, redshift)
         elif file == "BART":
-            redshift = PARAMETERS["redshift"]
-            search_string = "_spec-{}".format(grating)
-            asciis = glob.glob(datadir + "*" + search_string)
-            # multiple asciis??
+            if batch_mode:
+                asciis = [datadir]  # same story as the x1dsums
+            else:
+                search_string = "_spec-{}".format(grating)
+                asciis = glob.glob(datadir + "*" + search_string)
             for ascii_file in asciis:
                 basename = os.path.basename(ascii_file)
                 # this can be done better
@@ -93,9 +98,11 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                 error = np.array(data.columns["error"])
                 spectrum = ASCIISpectrum(target, wave, flux, error, redshift)
         elif file == "BART-N":
-            redshift = PARAMETERS["redshift"]
-            search_string = "_spec-{}-N".format(grating)
-            asciis = glob.glob(datadir + "*" + search_string)
+            if batch_mode:
+                asciis = [datadir]  # same story as the x1dsums
+            else:
+                search_string = "_spec-{}-N".format(grating)
+                asciis = glob.glob(datadir + "*" + search_string)
             for ascii_file in asciis:
                 basename = os.path.basename(ascii_file)
                 # this can be done better
@@ -109,9 +116,15 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                 error = np.array(data.columns["error"])
                 spectrum = ASCIISpectrum(target, wave, flux, error, redshift)
         elif file == "ASCII":
-            redshift = PARAMETERS["redshift"]
-            target = DEFAULTS["target"]
-            asciis = glob.glob(datadir + "*" + target + "*")
+            if batch_mode:
+                asciis = [datadir]  # same story as the x1dsums
+                # how do i get the target now??
+                target = ""
+                # ya don't, not in this hack. it'll be empty but batch mode
+                # will provide it
+            else:
+                target = DEFAULTS["target"]
+                asciis = glob.glob(datadir + "*" + target + "*")
             for ascii_file in asciis:
                 data = ascii.read(ascii_file, names=["wave", "flux", "error"])
                 if len(data.columns) > 3:

@@ -33,6 +33,7 @@ setup(
         'pyyaml'
         ],
     package_data={'spectrAOD': ['mini_ions.csv']},
-    entry_points={'console_scripts': ['measure=spectrAOD.measure_aod:main']}
+    entry_points={'console_scripts': ['measure=spectrAOD.measure_aod:main',
+                                      'batch=spectrAOD.batch_run:main']}
     # dependency_links=[],
     )

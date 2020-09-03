@@ -139,9 +139,8 @@ def parse():
 
 def lsr_correct(args, spectrum):
     """This function performs the lsr correction"""
-
     # find ion wavelength from ions.csv
-    spectrum.get_ions(args.ion)
+    spectrum.get_ions(args["ion"])
     # transform wavelength array of spectrum object to velocity space
     spectrum.calculate_velocity()
     # find RA & DEC of target from target list
@@ -185,7 +184,7 @@ def continuum_fit(spectrum, left=DEFAULTS["continuum_left"],
 
 def measure(args, spectrum):
     # find indices in velocity window (from -100 to 100, for example)
-    window = [args.vel_min, args.vel_max]
+    window = [args["vel_min"], args["vel_max"]]
     indices = spectrum.find_indices(window)
     # make truncated spectrum object to perform these measurements
     helper = Helper(spectrum, indices)

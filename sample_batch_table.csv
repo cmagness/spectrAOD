@@ -1,0 +1,5 @@
+,ROOTNAME,TARGET,ION,INSTRUMENT,FILETYPE,VEL_MIN,VEL_MAX,GRATING,REDSHIFT
+0,rootname, target, ion, instrument, filetype, vel_min, vel_max, grating,
+redshift
+1,rootname, target, ion, instrument, filetype, vel_min, vel_max, grating,
+redshift
