@@ -3,10 +3,12 @@ inputs:
   datadir:
   # string: path to output directory
   outdir:
-  # string: path to target list
+  # string: path to target list. use an empty string for X1DSUM filetype
   targets:
 
 parameters:
+  # string: ion
+  ion:
   # string: instrument
   instrument:
   # string: filetype
@@ -18,9 +20,19 @@ parameters:
   # string: grating
   grating:
   # will need to deal with situations where there are no gratings in the future
+  # float: redshift in z. use 0.0 for MW
+  redshift:
 
 defaults:
+  # string: target name. only required for ASCII filetypes
+  target: ""
+  # list[int, int]: specify continuum windows to measure from, velocity (km/s)
   continuum_left: [-450, -300]
   continuum_right: [300, 450]
+  # bool: show_plot=True displays visualization before being saved
+  show_plot: False
+  # bool: galactic=True assumes target list coordinates are galactic instead
+  # of equatorial (default)
+  galactic: False
   # string: path to ions file if not using default ions list
   all_ions: "mini_ions.csv"

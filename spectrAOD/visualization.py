@@ -83,10 +83,24 @@ class Visualizer:
         vel_min = PARAMETERS["vel_min"]
         vel_max = PARAMETERS["vel_max"]
 
-        # if not all([raw_flux, raw_velocity, lsr_velocity, contadjspec,
-        #         helper]):
-        #     LOGGER.error("Missing elements necessary to plot. Exiting...")
-        #     sys.exit()
+        # you can't just do list membership, i.e. if None in <list>,
+        # here because there are arrays in the list and that somehow messes
+        # this up
+        if any(elem is None for elem in [raw_flux, raw_velocity, lsr_velocity,
+                                         contadjspec, helper]):
+            LOGGER.error("NoneType in list: \n"
+                         "Raw Flux: {} \n"
+                         "Raw Velocity: {} \n"
+                         "LSR Corrected Velocity: {} \n"
+                         "Continuum Adjusted Spectrum: {} \n"
+                         "Helper Object: {}".format(type(raw_flux),
+                                                    type(raw_velocity),
+                                                    type(lsr_velocity),
+                                                    type(contadjspec),
+                                                    type(helper)))
+            LOGGER.error("Missing elements necessary to "
+                         "plot. Exiting...")
+            sys.exit()
 
         plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
@@ -137,7 +151,6 @@ class Visualizer:
         mask = np.where(contadjspec.norm_flux[0] > 0)
         norm_filtered = contadjspec.norm_flux[0][mask]
         lsr_filtered = lsr_velocity[mask]
-        print(norm_filtered, lsr_filtered)
         norm = norm_filtered * mean_flux + adj_delta
         # find the indices where the
         ax[0].step(lsr_filtered, norm, where="mid", data=None,
@@ -182,6 +195,15 @@ class Visualizer:
         if show:
             plt.show()
 
-        plt.savefig(os.path.join(INPUTS["outdir"], "plot.png"))
+        if len(target) < 10:
+            target_string = target
+        else:
+            target_string = target[0:10]
+        outfile = os.path.join(INPUTS["outdir"], "{}_{}_visualization.png"
+                               .format(target_string, ion))
+        if os.path.exists(outfile):
+            os.remove(outfile)
+        plt.savefig(outfile)
+        LOGGER.info("Visualization has been saved to {}.".format(outfile))
 
 # --------------------------------------------------------------------------- #

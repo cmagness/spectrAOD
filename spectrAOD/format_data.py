@@ -24,6 +24,7 @@ from .spectrum_classes import X1DSpectrum, ASCIISpectrum
 INPUTS = SETTINGS["inputs"]
 DATADIR = INPUTS["datadir"]
 PARAMETERS = SETTINGS["parameters"]
+DEFAULTS = SETTINGS["defaults"]
 LOGGER = logging.getLogger(__name__)
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
@@ -109,7 +110,7 @@ def build_spectrum(datadir=DATADIR, ins=PARAMETERS["instrument"],
                 spectrum = ASCIISpectrum(target, wave, flux, error, redshift)
         elif file == "ASCII":
             redshift = PARAMETERS["redshift"]
-            target = PARAMETERS["target"]
+            target = DEFAULTS["target"]
             asciis = glob.glob(datadir + "*" + target + "*")
             for ascii_file in asciis:
                 data = ascii.read(ascii_file, names=["wave", "flux", "error"])

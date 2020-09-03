@@ -555,10 +555,10 @@ class X1DSpectrum(BaseSpectrum):
         # this method should get the RA & DEC from the file header
         # instead of the coordinates list as the superclass does
         header = fits.getheader(self.filepath)
-        self.ra = header["RA_TARG"]
-        self.dec = header["DEC_TARG"]
-        self._skycoords = SkyCoord(ra=self.ra * u.degree,
-                                   dec=self.dec * u.degree)
+        ra = header["RA_TARG"]
+        dec = header["DEC_TARG"]
+        self._skycoords = SkyCoord(ra=ra * u.degree,
+                                   dec=dec * u.degree)
 
     def x1d_specs(self):
         # this method could hold other x1d specific stuff, like header

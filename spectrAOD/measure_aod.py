@@ -80,7 +80,7 @@ def parse():
     # parser.add_argument("--ion", default="SiIV", type=str,
     #                     help="absorption line feature of interest")
 
-    parser.add_argument("ion", type=str,
+    parser.add_argument("--ion", default=PARAMETERS["ion"], type=str,
                         help="absorption line feature of interest")
 
     parser.add_argument("--instrument", default=PARAMETERS["instrument"],
