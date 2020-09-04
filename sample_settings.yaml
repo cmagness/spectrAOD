@@ -24,6 +24,8 @@ parameters:
   redshift:
 
 defaults:
+  # string: path to your batch table
+  batch_table: ""
   # string: target name. only required for ASCII filetypes
   target: ""
   # list[int, int]: specify continuum windows to measure from, velocity (km/s)
