@@ -1,3 +1,12 @@
+# Equatorial
 ,Target,RA,DEC
 0,target_name,ra (decimal),dec (decimal)
 1,target_name2,ra (decimal),dec (decimal)
+# If you are using Galactic Coordinates please remove everything above this
+line
+# If you are using Equatorial coordinates please remove everything below this
+line
+# Galactic
+,Target,L,B
+0,target_name,l (decimal),b (decimal)
+1,target_name2,l (decimal),b (decimal)

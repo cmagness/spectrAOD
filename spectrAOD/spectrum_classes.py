@@ -222,6 +222,7 @@ class BaseSpectrum:
         self.flux = flux
         self.error = error
         self.ions = None
+        self.raw_velocity = None
         self.velocity = None
         self.norm_flux = None
         self.norm_error = None
@@ -230,8 +231,6 @@ class BaseSpectrum:
         self.sn_res = None
         self.delta = None
         self.doublet = False
-        self.ra = None
-        self.dec = None
         self._skycoords = None
         self._redshift = redshift
 
@@ -257,6 +256,20 @@ class BaseSpectrum:
     def b(self):
         if self._skycoords:
             return self._skycoords.galactic.b.value
+        else:
+            return None
+
+    @property
+    def ra(self):
+        if self._skycoords:
+            return self._skycoords.icrs.ra.value
+        else:
+            return None
+
+    @property
+    def dec(self):
+        if self._skycoords:
+            return self._skycoords.icrs.dec.value
         else:
             return None
 
@@ -304,7 +317,7 @@ class BaseSpectrum:
         if not vels:
             print("There are no valid ions to measure. Exiting now.")
             raise SystemExit
-        self.velocity = vels
+        self.raw_velocity = vels
         # eventually will need to keep track of ion associated with the
         # velocity array in a dictionary maybe?
         # for now it is fine because they are associated with the same ion
@@ -316,21 +329,30 @@ class BaseSpectrum:
         # need to add some error handling for if target name is not found in
         # list
         mask = df_targets["Target"].str.upper() == self.target.upper()
-        self.ra = (df_targets.loc[mask]["RA"]).values[0]
-        self.dec = (df_targets.loc[mask]["DEC"]).values[0]
-        self._skycoords = SkyCoord(ra=self.ra * u.degree,
-                                   dec=self.dec * u.degree)
+        if not DEFAULTS["galactic"]:
+            ra = (df_targets.loc[mask]["RA"]).values[0]
+            dec = (df_targets.loc[mask]["DEC"]).values[0]
+            self._skycoords = SkyCoord(ra=ra * u.degree,
+                                       dec=dec * u.degree)
+        else:
+            galactic_l = (df_targets.loc[mask]["L"]).values[0]
+            galactic_b = (df_targets.loc[mask]["B"]).values[0]
+            self._skycoords = SkyCoord(galactic_l * u.degree, galactic_b *
+                                       u.degree, frame="galactic")
 
     def lsr_correct_velocity(self):
         # this method should apply the lsr correction to the heliocentric
         # coordinates
+        self.velocity = self.raw_velocity
+        # this is a bad fix but temp bc can't set velocity[idx] to anything
+        # if there isn't a velocity set yet
         l_radians = self.l * np.pi / 180.0
         b_radians = self.b * np.pi / 180.0
         vel_corr = (9.0 * np.cos(l_radians) * np.cos(b_radians)) + (
                     12.0 * np.sin(l_radians) * np.cos(b_radians)) + \
                    (7.0 * np.sin(b_radians))
-        for idx in np.arange(len(self.velocity)):
-            self.velocity[idx] = self.velocity[idx] + vel_corr
+        for idx in np.arange(len(self.raw_velocity)):
+            self.velocity[idx] = self.raw_velocity[idx] + vel_corr
 
     def find_indices(self, window):
         # this method finds the indices for a velocity window for each
@@ -469,6 +491,8 @@ class BaseSpectrum:
                 "TARGET": self.target,
                 "RA": "{:.2f}".format(self.ra),
                 "DEC": "{:.2f}".format(self.dec),
+                "L": "{:.2f}".format(self.l),
+                "B": "{:.2f}".format(self.b),
                 "ION": self.ions["ion"][idx],
                 "WAVELENGTH": "{:4.2f}".format(self.ions["wv"][idx]),
                 "VEL MIN": vel_min,
@@ -531,10 +555,10 @@ class X1DSpectrum(BaseSpectrum):
         # this method should get the RA & DEC from the file header
         # instead of the coordinates list as the superclass does
         header = fits.getheader(self.filepath)
-        self.ra = header["RA_TARG"]
-        self.dec = header["DEC_TARG"]
-        self._skycoords = SkyCoord(ra=self.ra * u.degree,
-                                   dec=self.dec * u.degree)
+        ra = header["RA_TARG"]
+        dec = header["DEC_TARG"]
+        self._skycoords = SkyCoord(ra=ra * u.degree,
+                                   dec=dec * u.degree)
 
     def x1d_specs(self):
         # this method could hold other x1d specific stuff, like header

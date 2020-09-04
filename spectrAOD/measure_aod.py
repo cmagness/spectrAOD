@@ -15,6 +15,7 @@ import logging
 from . import SETTINGS
 from .format_data import build_spectrum
 from .spectrum_classes import Helper
+from .visualization import Visualizer
 
 INPUTS = SETTINGS["inputs"]
 DATADIR = INPUTS["datadir"]
@@ -39,20 +40,30 @@ LOGGER.addHandler(console)
 
 
 def main():
+    # create the visualizer object
+    visualizer = Visualizer()
     # argparse
     args, spectrum = parse()
     LOGGER.info("Spectrum object successfully built.")
+    visualizer.set_target(spectrum.target)
+    visualizer.set_raw_flux(spectrum.flux)
     # LSR correction
     spectrum = lsr_correct(args, spectrum)
     LOGGER.info("Spectrum LSR corrected.")
+    visualizer.set_raw_velocity(spectrum.raw_velocity[0])
+    visualizer.set_lsr_velocity(spectrum.velocity[0])
     # continuum fit
-    spectrum = continuum_fit(spectrum)
+    spectrum, left_indices, right_indices = continuum_fit(spectrum)
     LOGGER.info("Continuum fit calculated.")
+    visualizer.set_contadjspec(spectrum)
+    visualizer.set_indices(left_indices, right_indices)
     # measure aod/acd/ew
     # set measurements back in spectrum object from helper object
-    spectrum = measure(args, spectrum)
+    spectrum, helper = measure(args, spectrum)
+    visualizer.set_helper(helper)
     # generate table
     spectrum.generate_table(args.vel_min, args.vel_max)
+    visualizer.plot()
     LOGGER.info("spectrAOD complete.")
     return 0
 
@@ -69,7 +80,7 @@ def parse():
     # parser.add_argument("--ion", default="SiIV", type=str,
     #                     help="absorption line feature of interest")
 
-    parser.add_argument("ion", type=str,
+    parser.add_argument("--ion", default=PARAMETERS["ion"], type=str,
                         help="absorption line feature of interest")
 
     parser.add_argument("--instrument", default=PARAMETERS["instrument"],
@@ -128,9 +139,8 @@ def parse():
 
 def lsr_correct(args, spectrum):
     """This function performs the lsr correction"""
-
     # find ion wavelength from ions.csv
-    spectrum.get_ions(args.ion)
+    spectrum.get_ions(args["ion"])
     # transform wavelength array of spectrum object to velocity space
     spectrum.calculate_velocity()
     # find RA & DEC of target from target list
@@ -166,7 +176,7 @@ def continuum_fit(spectrum, left=DEFAULTS["continuum_left"],
     # error attributes
     spectrum, linear_fits = spectrum.calculate_fits(continuum)
 
-    return spectrum
+    return spectrum, left_indices, right_indices
 
 
 # --------------------------------------------------------------------------- #
@@ -174,7 +184,7 @@ def continuum_fit(spectrum, left=DEFAULTS["continuum_left"],
 
 def measure(args, spectrum):
     # find indices in velocity window (from -100 to 100, for example)
-    window = [args.vel_min, args.vel_max]
+    window = [args["vel_min"], args["vel_max"]]
     indices = spectrum.find_indices(window)
     # make truncated spectrum object to perform these measurements
     helper = Helper(spectrum, indices)
@@ -195,7 +205,7 @@ def measure(args, spectrum):
     # sets measurements done in helper object in spectrum object
     spectrum.set_measurements(helper)
 
-    return spectrum
+    return spectrum, helper
 
 
 # -----------------------------------------------------------------------------
