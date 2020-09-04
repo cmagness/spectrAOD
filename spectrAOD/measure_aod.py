@@ -22,6 +22,7 @@ DATADIR = INPUTS["datadir"]
 TARGETS = INPUTS["targets"]
 PARAMETERS = SETTINGS["parameters"]
 DEFAULTS = SETTINGS["defaults"]
+BATCH_MODE = DEFAULTS["batch_table"]
 
 # set up log file. will overwrite with each new run
 # log file has DEBUG level + written to it, package, module, function
@@ -140,7 +141,10 @@ def parse():
 def lsr_correct(args, spectrum):
     """This function performs the lsr correction"""
     # find ion wavelength from ions.csv
-    spectrum.get_ions(args["ion"])
+    if BATCH_MODE:
+        spectrum.get_ions(args["ion"])
+    else:
+        spectrum.get_ions(args.ion)
     # transform wavelength array of spectrum object to velocity space
     spectrum.calculate_velocity()
     # find RA & DEC of target from target list
@@ -184,7 +188,10 @@ def continuum_fit(spectrum, left=DEFAULTS["continuum_left"],
 
 def measure(args, spectrum):
     # find indices in velocity window (from -100 to 100, for example)
-    window = [args["vel_min"], args["vel_max"]]
+    if BATCH_MODE:
+        window = [args["vel_min"], args["vel_max"]]
+    else:
+        window = [args.vel_min, args.vel_max]
     indices = spectrum.find_indices(window)
     # make truncated spectrum object to perform these measurements
     helper = Helper(spectrum, indices)
