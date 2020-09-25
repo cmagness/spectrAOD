@@ -49,16 +49,17 @@ class Helper:
         }
         for idx, velocity in enumerate(spectrum.velocity):
             # truncated arrays in feature window corresponding to indices
-            vel_window = velocity[indices[0][0]:indices[0][1]]
-            norm_flux_window = spectrum.norm_flux[idx][indices[0][0]:indices[
-                0][1]]
+            vel_window = velocity[indices[idx][0]:indices[idx][1]]
+            norm_flux_window = spectrum.norm_flux[idx][indices[idx][0]:indices[
+                idx][1]]
             norm_err_window = spectrum.norm_error[idx][
-                              indices[0][0]:indices[0][1]]
-            cont_window = spectrum.continuum[idx][indices[0][0]:indices[0][1]]
+                              indices[idx][0]:indices[idx][1]]
+            cont_window = spectrum.continuum[idx][indices[idx][0]:indices[
+                idx][1]]
             # 5% continuum fitting error
             cont_err_window = 0.05 * cont_window
             norm_cont_err_window = cont_err_window / cont_window
-            delta_window = spectrum.delta[idx][indices[0][0]:indices[0][1]]
+            delta_window = spectrum.delta[idx][indices[idx][0]:indices[idx][1]]
             truncated_dict["velocity"].append(vel_window)
             truncated_dict["flux"].append(norm_flux_window)
             truncated_dict["error"].append(norm_err_window)
