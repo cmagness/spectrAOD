@@ -44,7 +44,7 @@ We recommend a short and simple name for the environment such as `spectraod`.
 
 From the command line, in your new environment:
 ```
-pip install spectrAOD==1.0.0
+pip install spectrAOD==1.1.0
 ```
 
 You can drop the version number and just use the name of the package if you 

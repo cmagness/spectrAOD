@@ -31,3 +31,4 @@ settings.yaml
 
 # Misc
 *.log
+*/__pycache__/*
