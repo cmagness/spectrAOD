@@ -50,8 +50,8 @@ def main():
     # LSR correction
     spectrum = lsr_correct(args, spectrum)
     LOGGER.info("Spectrum LSR corrected.")
-    visualizer.set_raw_velocity(spectrum.raw_velocity[0])
-    visualizer.set_lsr_velocity(spectrum.velocity[0])
+    visualizer.set_raw_velocity(spectrum.raw_velocity)
+    visualizer.set_lsr_velocity(spectrum.velocity)
     # continuum fit
     spectrum, left_indices, right_indices = continuum_fit(spectrum)
     LOGGER.info("Continuum fit calculated.")
